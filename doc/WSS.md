@@ -1,16 +1,16 @@
-# RTMP servers control protocol
+# WebSocket stream servers control protocol
 
-RTMP servers will connect to the coordinator server via WebSockets, at the URL:
+WebSocket stream servers will connect to the coordinator server via WebSockets, at the URL:
 
 ```
-ws(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/ws/control/rtmp
+ws(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/ws/control/wss
 ```
 
-In order to authenticate, the RTMP server will provide the `x-control-auth-token` header. This header will contain a JWT (JSON Web Token) signed with the shared secret provided in the environment variable `CONTROL_SECRET` (shared between the coordinator and the RTMP servers), using the hash signature algorithm `HMAC_256`, with the subject set to `rtmp-control`.
+In order to authenticate, the WebSocket stream server will provide the `x-control-auth-token` header. This header will contain a JWT (JSON Web Token) signed with the shared secret provided in the environment variable `CONTROL_SECRET` (shared between the coordinator and the WebSocket stream servers), using the hash signature algorithm `HMAC_256`, with the subject set to `wss-control`.
 
-If the RTMP server is behind a proxy or NAT, it must set its external IP in the header `x-external-ip`. If not specified, the connection IP address is used.
+If the WebSocket stream server is behind a proxy or NAT, it must set its external IP in the header `x-external-ip`. If not specified, the connection IP address is used.
 
-If the RTMP server uses a different port rather than `8080`, it must specify that port in the header `x-custom-port`.
+If the WebSocket stream server uses a different port rather than `8080`, it must specify that port in the header `x-custom-port`.
 
 ## Message format
 
@@ -35,7 +35,7 @@ Here is the full list of message types, including their purpose and full structu
 
 ### Heartbeat
 
-The heartbeat messages are sent each 30 seconds by both, the coordinator and the rtmp server.
+The heartbeat messages are sent each 30 seconds by both, the coordinator and the WebSocket stream server.
 
 If one of the agents does not receive a heartbeat message during 1 minute, the connection may be closed due to inactivity.
 
@@ -64,7 +64,7 @@ After this message is received, the connection will be closed.
 
 ### Publish-Request
 
-When the RTMP server receives a publish request, it will forward the information to the coordinator with a `PUBLISH-REQUEST` message.
+When the WebSocket stream server receives a publish request, it will forward the information to the coordinator with a `PUBLISH-REQUEST` message.
 
 The required arguments are:
 
@@ -116,7 +116,7 @@ Stream-Channel: example-channel
 
 ### Publish-End
 
-After being accepted, if a publishing connection ends, the RTMP server will send a `PUBLISH-END` message.
+After being accepted, if a publishing connection ends, the WebSocket stream server will send a `PUBLISH-END` message.
 
 The required arguments are:
 
