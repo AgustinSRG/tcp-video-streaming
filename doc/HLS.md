@@ -1,6 +1,6 @@
 # HLS encoders control protocol
 
-HLS encodes will connect to the coordinator server vie WebSockets, at the URL:
+HLS encodes will connect to the coordinator server via WebSockets, at the URL:
 
 ```
 ws(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/ws/control/hls
@@ -14,7 +14,7 @@ The messages are UTF-8 encoded strings, with parts split by line breaks (\n):
  
   - The first line is the message type
   - After it, the message can have an arbitrary number of arguments. Each argument has a name, followed by a colon and it's value.
-  - Optionally, after the arguments, it can be an empty line, followed by the body of the message. In this case, the body will be JSON encoded messages referring to the SDP and candidate exchange.
+  - Optionally, after the arguments, it can be an empty line, followed by the body of the message.
 
 ```
 MESSAGE-TYPE
@@ -23,7 +23,6 @@ Auth: auth-token
 Argument: value
 
 {body}
-...
 ```
 
 ## Message types
