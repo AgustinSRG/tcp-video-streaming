@@ -31,6 +31,10 @@ func LogError(err error) {
 	LogLine("[ERROR] " + err.Error())
 }
 
+func LogErrorMessage(err string) {
+	LogLine("[ERROR] " + err)
+}
+
 var LOG_REQUESTS_ENABLED = (os.Getenv("LOG_REQUESTS") != "NO")
 
 func LogRequest(session_id uint64, ip string, line string) {

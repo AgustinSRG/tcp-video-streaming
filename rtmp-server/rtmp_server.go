@@ -26,33 +26,35 @@ type RTMPChannel struct {
 }
 
 type RTMPServer struct {
-	port            int
-	listener        net.Listener
-	secureListener  net.Listener
-	mutex           *sync.Mutex
-	sessions        map[uint64]*RTMPSession
-	channels        map[string]*RTMPChannel
-	ip_count        map[string]uint32
-	ip_limit        uint32
-	ip_mutex        *sync.Mutex
-	next_session_id uint64
-	gopCacheLimit   int64
-	closed          bool
+	port                       int
+	listener                   net.Listener
+	secureListener             net.Listener
+	websocketControlConnection *ControlServerConnection
+	mutex                      *sync.Mutex
+	sessions                   map[uint64]*RTMPSession
+	channels                   map[string]*RTMPChannel
+	ip_count                   map[string]uint32
+	ip_limit                   uint32
+	ip_mutex                   *sync.Mutex
+	next_session_id            uint64
+	gopCacheLimit              int64
+	closed                     bool
 }
 
 func CreateRTMPServer() *RTMPServer {
 	server := RTMPServer{
-		listener:        nil,
-		secureListener:  nil,
-		mutex:           &sync.Mutex{},
-		ip_mutex:        &sync.Mutex{},
-		sessions:        make(map[uint64]*RTMPSession),
-		channels:        make(map[string]*RTMPChannel),
-		next_session_id: 1,
-		closed:          false,
-		ip_count:        make(map[string]uint32),
-		ip_limit:        4,
-		gopCacheLimit:   256 * 1024 * 1024,
+		listener:                   nil,
+		secureListener:             nil,
+		mutex:                      &sync.Mutex{},
+		ip_mutex:                   &sync.Mutex{},
+		sessions:                   make(map[uint64]*RTMPSession),
+		channels:                   make(map[string]*RTMPChannel),
+		next_session_id:            1,
+		closed:                     false,
+		ip_count:                   make(map[string]uint32),
+		ip_limit:                   4,
+		gopCacheLimit:              256 * 1024 * 1024,
+		websocketControlConnection: &ControlServerConnection{},
 	}
 
 	custom_ip_limit := os.Getenv("MAX_IP_CONCURRENT_CONNECTIONS")
@@ -431,6 +433,10 @@ func (server *RTMPServer) SendPings(wg *sync.WaitGroup) {
 }
 
 func (server *RTMPServer) Start() {
+	// Initialize websocket connection
+	server.websocketControlConnection.Initialize()
+
+	// Start RTMP server
 	var wg sync.WaitGroup
 	if server.listener != nil {
 		wg.Add(1)
