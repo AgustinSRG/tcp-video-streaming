@@ -13,17 +13,31 @@ import (
 )
 
 type ControlServerConnection struct {
+	server        *RTMPServer
 	connectionURL string
 	connection    *websocket.Conn
 	lock          *sync.Mutex
 	nextRequestId uint64
 	enabled       bool
+
+	requests map[string]*ControlServerPendingRequest
+}
+
+type ControlServerPendingRequest struct {
+	waiter chan PublishResponse
+}
+
+type PublishResponse struct {
+	accepted bool
+	streamId string
 }
 
 // Initializes connection
-func (c *ControlServerConnection) Initialize() {
+func (c *ControlServerConnection) Initialize(server *RTMPServer) {
+	c.server = server
 	c.lock = &sync.Mutex{}
 	c.nextRequestId = 0
+	c.requests = make(map[string]*ControlServerPendingRequest)
 
 	baseURL := os.Getenv("CONTROL_BASE_URL")
 
@@ -184,7 +198,66 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 // Parses an incoming message
 // msg - Received parsed message
 func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
+	switch msg.method {
+	case "ERROR":
+		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.params["error-code"] + " / Details: " + msg.params["error-message"])
+	case "PUBLISH-ACCEPT":
+		c.OnPublishAccept(msg.params["request-id"], msg.params["stream-id"])
+	case "PUBLISH-DENY":
+		c.OnPublishDeny(msg.params["request-id"])
+	case "STREAM-KILL":
+		c.OnPublishDeny(msg.params["request-id"])
+	}
+}
 
+func (c *ControlServerConnection) OnPublishAccept(requestId string, streamId string) {
+	c.lock.Lock()
+	req := c.requests[requestId]
+	c.lock.Unlock()
+
+	if req == nil {
+		return
+	}
+
+	res := PublishResponse{
+		accepted: true,
+		streamId: streamId,
+	}
+
+	req.waiter <- res
+}
+
+func (c *ControlServerConnection) OnPublishDeny(requestId string) {
+	c.lock.Lock()
+	req := c.requests[requestId]
+	c.lock.Unlock()
+
+	if req == nil {
+		return
+	}
+
+	res := PublishResponse{
+		accepted: false,
+		streamId: "",
+	}
+
+	req.waiter <- res
+}
+
+func (c *ControlServerConnection) OnStreamKill(channel string, streamId string) {
+	if streamId == "*" || streamId == "" {
+		publisher := c.server.GetPublisher(channel)
+
+		if publisher != nil {
+			publisher.Kill()
+		}
+	} else {
+		publisher := c.server.GetPublisher(channel)
+
+		if publisher != nil && publisher.stream_id == streamId {
+			publisher.Kill()
+		}
+	}
 }
 
 // Sends heart-beat messages to keep the connection alive

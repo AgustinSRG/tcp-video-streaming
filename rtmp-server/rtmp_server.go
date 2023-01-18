@@ -434,7 +434,7 @@ func (server *RTMPServer) SendPings(wg *sync.WaitGroup) {
 
 func (server *RTMPServer) Start() {
 	// Initialize websocket connection
-	server.websocketControlConnection.Initialize()
+	server.websocketControlConnection.Initialize(server)
 
 	// Start RTMP server
 	var wg sync.WaitGroup
