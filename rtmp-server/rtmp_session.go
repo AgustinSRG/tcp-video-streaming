@@ -542,13 +542,14 @@ func (s *RTMPSession) HandlePublish(cmd *RTMPCommand, packet *RTMPPacket) bool {
 
 	LogRequest(s.id, s.ip, "PUBLISH ("+strconv.Itoa(int(s.publishStreamId))+") '"+s.channel+"'")
 
-	// Callback
-	// TODO (PROTO)
-	/*if !s.SendStartCallback() {
+	// Coordinator
+	pubAccepted, streamId := s.server.websocketControlConnection.RequestPublish(s.channel, s.key, s.ip)
+	if !pubAccepted {
 		LogRequest(s.id, s.ip, "Error: Invalid streaming key provided")
 		s.SendStatusMessage(s.publishStreamId, "error", "NetStream.Publish.BadName", "Invalid stream key provided")
 		return false
-	}*/
+	}
+	s.stream_id = streamId
 
 	// Set publisher
 	s.isPublishing = true

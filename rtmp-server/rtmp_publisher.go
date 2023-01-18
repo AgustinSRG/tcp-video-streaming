@@ -125,12 +125,11 @@ func (s *RTMPSession) EndPublish(isClose bool) {
 		s.isPublishing = false
 
 		// Send event
-		// TODO (PROTO)
-		/*if s.SendStopCallback() {
+		if s.server.websocketControlConnection.PublishEnd(s.channel, s.stream_id) {
 			LogDebugSession(s.id, s.ip, "Stop event sent")
 		} else {
 			LogDebugSession(s.id, s.ip, "Could not send stop event")
-		}*/
+		}
 	}
 }
 

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -274,4 +275,79 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 
 		c.Send(heartbeatMessage)
 	}
+}
+
+// Requests publishing to the coordinator server
+// channel - RTMP channel ID
+// key - Publishing key
+// userIP - IP address of the user
+// Returns:
+//    - accepted - True if the key was accepted
+//    - streamId - Contains the Stream ID if accepted
+// This method waits for the server to return a response
+func (c *ControlServerConnection) RequestPublish(channel string, key string, userIP string) (accepted bool, streamId string) {
+	if !c.enabled {
+		return true, ""
+	}
+
+	requestId := fmt.Sprint(c.GetNextRequestId())
+
+	request := ControlServerPendingRequest{
+		waiter: make(chan PublishResponse),
+	}
+
+	msgParams := make(map[string]string)
+
+	msgParams["Request-ID"] = requestId
+	msgParams["Stream-Channel"] = channel
+	msgParams["Stream-Key"] = key
+	msgParams["User-IP"] = userIP
+
+	msg := WebsocketMessage{
+		method: "PUBLISH-REQUEST",
+		params: msgParams,
+		body:   "",
+	}
+
+	c.lock.Lock()
+	c.requests[requestId] = &request
+	c.lock.Unlock()
+
+	success := c.Send(msg)
+
+	if !success {
+		c.lock.Lock()
+		delete(c.requests, requestId)
+		c.lock.Unlock()
+
+		return false, ""
+	}
+
+	time.AfterFunc(20*time.Second, func() { request.waiter <- PublishResponse{accepted: false, streamId: ""} }) // Timeout
+
+	res := <-request.waiter // Wait
+
+	c.lock.Lock()
+	delete(c.requests, requestId)
+	c.lock.Unlock()
+
+	return res.accepted, res.streamId
+}
+
+// Send Publish-End message to the coordinator server
+// channel - Streaming channel
+// streamId - Streaming session ID
+func (c *ControlServerConnection) PublishEnd(channel string, streamId string) bool {
+	msgParams := make(map[string]string)
+
+	msgParams["Stream-Channel"] = channel
+	msgParams["Stream-ID"] = streamId
+
+	msg := WebsocketMessage{
+		method: "PUBLISH-END",
+		params: msgParams,
+		body:   "",
+	}
+
+	return c.Send(msg)
 }
