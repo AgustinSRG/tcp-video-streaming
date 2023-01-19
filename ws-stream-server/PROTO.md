@@ -59,4 +59,4 @@ As soon as a single chunk is available, it will be received as as **BINARY** web
 
 After receiving a single chunk, the connection will be closed by the server.
 
-This kid of connection is very useful for checking the data, for example to detect the codecs used for video and audio, or the resolution of the video.
+This kind of connection is very useful for checking the data, for example to detect the codecs used for video and audio, or the resolution of the video.
