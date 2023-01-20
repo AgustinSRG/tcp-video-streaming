@@ -14,6 +14,7 @@ import (
 )
 
 type ControlServerConnection struct {
+	server        *WS_Streaming_Server
 	connectionURL string
 	connection    *websocket.Conn
 	lock          *sync.Mutex
@@ -33,7 +34,8 @@ type PublishResponse struct {
 }
 
 // Initializes connection
-func (c *ControlServerConnection) Initialize() {
+func (c *ControlServerConnection) Initialize(server *WS_Streaming_Server) {
+	c.server = server
 	c.lock = &sync.Mutex{}
 	c.nextRequestId = 0
 	c.requests = make(map[string]*ControlServerPendingRequest)
@@ -245,9 +247,17 @@ func (c *ControlServerConnection) OnPublishDeny(requestId string) {
 
 func (c *ControlServerConnection) OnStreamKill(channel string, streamId string) {
 	if streamId == "*" || streamId == "" {
-		// TODO
+		publisher := c.server.GetPublisher(channel)
+
+		if publisher != nil {
+			publisher.Kill()
+		}
 	} else {
-		// TODO
+		publisher := c.server.GetPublisher(channel)
+
+		if publisher != nil && publisher.streamId == streamId {
+			publisher.Kill()
+		}
 	}
 }
 
