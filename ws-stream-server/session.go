@@ -137,6 +137,15 @@ func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w ht
 		}
 
 		streamId = publishStreamId
+	} else {
+		// Play
+		if !checkSessionCanPlay(ip) {
+			LogRequest(sessionId, ip, "Error: Cannot play: Not whitelisted")
+			w.WriteHeader(403)
+			fmt.Fprintf(w, "Cannot play: Not whitelisted.")
+			server.RemoveIP(ip)
+			return
+		}
 	}
 
 	// Create session

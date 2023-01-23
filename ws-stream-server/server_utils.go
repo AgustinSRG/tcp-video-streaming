@@ -3,9 +3,13 @@
 package main
 
 import (
+	"net"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
+
+	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
 var ID_MAX_LENGTH = 128
@@ -31,4 +35,31 @@ func validateStreamIDString(str string) bool {
 	}
 
 	return m
+}
+
+func checkSessionCanPlay(ipStr string) bool {
+	playWhiteList := os.Getenv("PLAY_WHITELIST")
+
+	if playWhiteList == "" || playWhiteList == "*" {
+		return true
+	}
+
+	ip := net.ParseIP(ipStr)
+
+	parts := strings.Split(playWhiteList, ",")
+
+	for i := 0; i < len(parts); i++ {
+		rang, e := iprange.ParseRange(parts[i])
+
+		if e != nil {
+			LogError(e)
+			continue
+		}
+
+		if rang.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }
