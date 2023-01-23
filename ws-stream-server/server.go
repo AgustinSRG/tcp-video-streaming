@@ -31,6 +31,8 @@ type WS_Streaming_Server struct {
 	mutex    *sync.Mutex
 	sessions map[uint64]*WS_Streaming_Session
 	channels map[string]*WS_Streaming_Channel
+
+	staticTestHandler http.Handler
 }
 
 type WS_Streaming_Channel struct {
@@ -75,6 +77,15 @@ func (server *WS_Streaming_Server) Initialize() {
 	server.mutex = &sync.Mutex{}
 	server.sessions = make(map[uint64]*WS_Streaming_Session)
 	server.channels = make(map[string]*WS_Streaming_Channel)
+
+	testFrontStat, err := os.Stat("./test")
+
+	if err == nil && testFrontStat.IsDir() && os.Getenv("DISABLE_TEST_CLIENT") != "YES" {
+		server.staticTestHandler = http.FileServer(http.Dir("./test/"))
+		LogInfo("Test client is available. To disable it, set DISABLE_TEST_CLIENT=YES")
+	} else {
+		server.staticTestHandler = nil
+	}
 }
 
 // Generates unique ID for each request
@@ -173,21 +184,18 @@ func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Re
 
 	LogRequest(sessionId, ip, ""+req.Method+" "+req.RequestURI)
 
-	// URI exceptions
-
-	if req.RequestURI == "/" {
-		w.WriteHeader(200)
-		fmt.Fprintf(w, "Websocket streaming server (Version 1.0.0)")
-		return
-	}
-
-	// Websocket
-
 	parts := strings.Split(req.RequestURI, "/")
 
 	if parts == nil || len(parts) != 4 {
-		w.WriteHeader(404)
-		fmt.Fprintf(w, "Not found.")
+		if server.staticTestHandler != nil {
+			server.staticTestHandler.ServeHTTP(w, req)
+		} else if req.RequestURI == "/" {
+			w.WriteHeader(200)
+			fmt.Fprintf(w, "Websocket streaming server (Version 1.0.0)")
+		} else {
+			w.WriteHeader(404)
+			fmt.Fprintf(w, "Not found.")
+		}
 		return
 	}
 

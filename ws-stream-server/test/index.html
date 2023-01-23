@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Stream Server testing</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="text/javascript" src="./test.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <video id="main-video" controls></video>
+        <div class="controls-group">
+            <label>Channel:</label>
+            <input id="channelInput" type="text" maxlength="128" value="test_channel">
+        </div>
+        <div class="controls-group">
+            <label>Key:</label>
+            <input id="keyInput" type="text" maxlength="128" value="test_key">
+        </div>
+        <div class="controls-group">
+            <button id="playButton">PLAY</button>
+            <button id="publishButton">PUBLISH</button>
+            <button id="stopButton" disabled>STOP</button>
+        </div>
+    </div>
+</body>
+</html>
