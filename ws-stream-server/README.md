@@ -59,7 +59,7 @@ Here is a list with more options you can configure:
 
 | Variable Name                 | Description                                                                                                                        |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| PORT                          | HTTP listening port. Default is `80`                                                                                               |
+| HTTP_PORT                     | HTTP listening port. Default is `80`                                                                                               |
 | BIND_ADDRESS                  | Bind address for RTMP and RTMPS. By default it binds to all network interfaces.                                                    |
 | RTMP_CHUNK_SIZE               | RTMP Chunk size in bytes. Default is `128`                                                                                         |
 | LOG_REQUESTS                  | Set to `YES` or `NO`. By default is `YES`                                                                                          |

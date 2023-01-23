@@ -2,7 +2,13 @@
 
 package main
 
+import (
+	"github.com/joho/godotenv"
+)
+
 func main() {
+	godotenv.Load() // Load env vars
+
 	LogInfo("Websocket streaming server (Version 1.0.0)")
 
 	server := WS_Streaming_Server{}
