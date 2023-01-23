@@ -12,6 +12,14 @@ import (
 
 var LOG_MUTEX = sync.Mutex{}
 
+var LOG_REQUESTS_ENABLED = (os.Getenv("LOG_REQUESTS") != "NO")
+var LOG_DEBUG_ENABLED = (os.Getenv("LOG_DEBUG") == "YES")
+
+func InitLog() {
+	LOG_DEBUG_ENABLED = (os.Getenv("LOG_DEBUG") == "YES")
+	LOG_REQUESTS_ENABLED = (os.Getenv("LOG_REQUESTS") != "NO")
+}
+
 func LogLine(line string) {
 	tm := time.Now()
 	LOG_MUTEX.Lock()
@@ -35,15 +43,11 @@ func LogErrorMessage(err string) {
 	LogLine("[ERROR] " + err)
 }
 
-var LOG_REQUESTS_ENABLED = (os.Getenv("LOG_REQUESTS") != "NO")
-
 func LogRequest(session_id uint64, ip string, line string) {
 	if LOG_REQUESTS_ENABLED {
 		LogLine("[REQUEST] #" + strconv.Itoa(int(session_id)) + " (" + ip + ") " + line)
 	}
 }
-
-var LOG_DEBUG_ENABLED = (os.Getenv("LOG_DEBUG") == "YES")
 
 func LogDebug(line string) {
 	if LOG_DEBUG_ENABLED {
