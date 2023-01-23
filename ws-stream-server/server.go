@@ -208,7 +208,7 @@ func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Re
 		}
 	}
 
-	go server.HandleStreamingSession(sessionId, w, req, ip, parts[1], parts[2], parts[3])
+	server.HandleStreamingSession(sessionId, w, req, ip, parts[1], parts[2], parts[3])
 }
 
 func (server *WS_Streaming_Server) AddSession(s *WS_Streaming_Session) {

@@ -154,7 +154,7 @@ func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w ht
 		id:               sessionId,
 		server:           server,
 		ip:               ip,
-		conn:             nil,
+		conn:             conn,
 		mutex:            &sync.Mutex{},
 		publishMutex:     &sync.Mutex{},
 		closed:           false,
@@ -176,7 +176,7 @@ func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w ht
 	server.AddSession(&session) // Add session to the server
 
 	// Run session
-	session.Run()
+	go session.Run()
 }
 
 func (session *WS_Streaming_Session) SendText(txt string) error {
