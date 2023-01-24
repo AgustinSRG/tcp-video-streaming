@@ -30,12 +30,20 @@ const GenuineFPConst = "Genuine Adobe Flash Player 001"
 
 var GenuineFPConstCrud = append([]byte(GenuineFPConst), RandomCrud...)
 
+// Calculates HMAC
+// message - The message
+// key - Th key
+// Returns the HMAC hash
 func calcHmac(message []byte, key []byte) []byte {
 	h := hmac.New(sha256.New, key)
 	h.Write(message)
 	return h.Sum(nil)
 }
 
+// Compares two signatures
+// sig1 - First signature
+// sig2 - Second signature
+// Returns true only if the two signatures are the same
 func compareSignatures(sig1 []byte, sig2 []byte) bool {
 	if len(sig1) != len(sig2) {
 		return false
@@ -52,6 +60,9 @@ func compareSignatures(sig1 []byte, sig2 []byte) bool {
 	return result
 }
 
+// Gets the basic digest of the RTMP Genuine const of the client
+// buf - Buffer to read from
+// Returns the digest
 func GetClientGenuineConstDigestOffset(buf []byte) uint32 {
 	var offset uint32
 
@@ -61,6 +72,9 @@ func GetClientGenuineConstDigestOffset(buf []byte) uint32 {
 	return offset
 }
 
+// Gets the basic digest of the RTMP Genuine const of the server
+// buf - Buffer to read from
+// Returns the digest
 func GetServerGenuineConstDigestOffset(buf []byte) uint32 {
 	var offset uint32
 
@@ -70,6 +84,9 @@ func GetServerGenuineConstDigestOffset(buf []byte) uint32 {
 	return offset
 }
 
+// Detects message format from client signature
+// clientsig - Client signature
+// Returns the message format as an int
 func detectClientMessageFormat(clientsig []byte) uint32 {
 	var sdl uint32
 	var msg []byte
@@ -125,6 +142,9 @@ func detectClientMessageFormat(clientsig []byte) uint32 {
 	return MESSAGE_FORMAT_0
 }
 
+// Generates the first part of the RTMP server handshake response
+// messageFormat - Client message format
+// Returns the response
 func generateS1(messageFormat uint32) []byte {
 	var randomBytes []byte
 	randomBytes = make([]byte, RTMP_SIG_SIZE-8)
@@ -183,6 +203,9 @@ func generateS1(messageFormat uint32) []byte {
 	return handshakeBytes
 }
 
+// Generates the second part of the RTMP server handshake response
+// messageFormat - Client message format
+// Returns the response
 func generateS2(messageFormat uint32, clientsig []byte) []byte {
 	var randomBytes []byte
 	randomBytes = make([]byte, RTMP_SIG_SIZE-32)
@@ -223,6 +246,9 @@ func generateS2(messageFormat uint32, clientsig []byte) []byte {
 	return s2Bytes
 }
 
+// Generates a RTMP handshake response
+// clientsig - Client signature received
+// Returns the response to send to the client
 func generateS0S1S2(clientsig []byte) []byte {
 	var clientType []byte
 	var messageFormat uint32

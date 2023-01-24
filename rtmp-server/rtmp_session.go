@@ -650,7 +650,7 @@ func (s *RTMPSession) HandleDeleteStream(cmd *RTMPCommand) bool {
 		// Close play
 		LogRequest(s.id, s.ip, "PLAY STOP '"+s.channel+"'")
 
-		s.server.RemovePlayer(s.channel, s.key, s)
+		s.server.RemovePlayer(s.channel, s)
 
 		s.SendStatusMessage(s.playStreamId, "status", "NetStream.Play.Stop", "Stopped playing stream.")
 
@@ -679,7 +679,7 @@ func (s *RTMPSession) DeleteStream(streamId uint32) {
 		// Close play
 		LogDebugSession(s.id, s.ip, "Close play stream: "+strconv.Itoa(int(streamId)))
 
-		s.server.RemovePlayer(s.channel, s.key, s)
+		s.server.RemovePlayer(s.channel, s)
 
 		s.playStreamId = 0
 		s.isPlaying = false

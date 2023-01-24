@@ -7,6 +7,8 @@ import (
 	"crypto/subtle"
 )
 
+// Starts sending to idle players
+// Call only for publishers
 func (s *RTMPSession) StartIdlePlayers() {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -51,6 +53,9 @@ func (s *RTMPSession) StartIdlePlayers() {
 	}
 }
 
+// Starts a specific player
+// Call only for publishers
+// player - The player session
 func (s *RTMPSession) StartPlayer(player *RTMPSession) {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -88,6 +93,9 @@ func (s *RTMPSession) StartPlayer(player *RTMPSession) {
 	}
 }
 
+// Resumes a player that was paused
+// Call only for publishers
+// player - The player session
 func (s *RTMPSession) ResumePlayer(player *RTMPSession) {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -96,6 +104,9 @@ func (s *RTMPSession) ResumePlayer(player *RTMPSession) {
 	player.SendVideoCodecHeader(s.videoCodec, s.avcSequenceHeader, s.clock)
 }
 
+// Finishes a publishing session
+// Call only for publishers
+// isClose - True if it was closed due to a disconnection
 func (s *RTMPSession) EndPublish(isClose bool) {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -133,6 +144,8 @@ func (s *RTMPSession) EndPublish(isClose bool) {
 	}
 }
 
+// Sets the clock for a publishing session
+// clock - The value of the clock
 func (s *RTMPSession) SetClock(clock int64) {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -140,6 +153,8 @@ func (s *RTMPSession) SetClock(clock int64) {
 	s.clock = clock
 }
 
+// Sets the stream metadata that is being publishing
+// metaData - The metadata
 func (s *RTMPSession) SetMetaData(metaData []byte) {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()

@@ -16,31 +16,45 @@ import (
 	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
+// Stores status data for a specific streaming channel
 type RTMPChannel struct {
-	channel       string
-	key           string
-	stream_id     string
-	publisher     uint64
-	is_publishing bool
-	players       map[uint64]bool
+	channel string // The channel ID
+	key     string // The channel key
+
+	is_publishing bool   // True if there is an stream being published
+	publisher     uint64 // The ID of the session that is publishing
+
+	stream_id string // The current stream ID
+
+	players map[uint64]bool // Players receiving the stream or waiting for it
 }
 
+// RTMP server
 type RTMPServer struct {
-	port                       int
-	listener                   net.Listener
-	secureListener             net.Listener
-	websocketControlConnection *ControlServerConnection
-	mutex                      *sync.Mutex
-	sessions                   map[uint64]*RTMPSession
-	channels                   map[string]*RTMPChannel
-	ip_count                   map[string]uint32
-	ip_limit                   uint32
-	ip_mutex                   *sync.Mutex
-	next_session_id            uint64
-	gopCacheLimit              int64
-	closed                     bool
+	listener       net.Listener // TCP listener
+	secureListener net.Listener // TCP + SSL listener
+
+	websocketControlConnection *ControlServerConnection // Connection to the coordinator server
+
+	mutex *sync.Mutex // Mutex to access the status data (sessions, channels)
+
+	sessions map[uint64]*RTMPSession // Active sessions
+	channels map[string]*RTMPChannel // Active streaming channels
+
+	ip_limit uint32            // Max number of active sessions
+	ip_count map[string]uint32 // Mapping IP -> Number of active sessions
+
+	ip_mutex *sync.Mutex // Mutex for the IP count mapping
+
+	next_session_id  uint64      // ID for the next incoming session
+	session_id_mutex *sync.Mutex // Mutex to ensure session IDs are unique
+
+	gopCacheLimit int64 // Limit of the GOP cache (in bytes)
+
+	closed bool // True if the server is closed
 }
 
+// Creates a RTMP server using the configuration from the environment variables
 func CreateRTMPServer() *RTMPServer {
 	server := RTMPServer{
 		listener:                   nil,
@@ -50,6 +64,7 @@ func CreateRTMPServer() *RTMPServer {
 		sessions:                   make(map[uint64]*RTMPSession),
 		channels:                   make(map[string]*RTMPChannel),
 		next_session_id:            1,
+		session_id_mutex:           &sync.Mutex{},
 		closed:                     false,
 		ip_count:                   make(map[string]uint32),
 		ip_limit:                   4,
@@ -85,7 +100,6 @@ func CreateRTMPServer() *RTMPServer {
 			tcp_port = tcpp
 		}
 	}
-	server.port = tcp_port
 
 	lTCP, errTCP := net.Listen("tcp", bind_addr+":"+strconv.Itoa(tcp_port))
 	if errTCP != nil {
@@ -134,6 +148,9 @@ func CreateRTMPServer() *RTMPServer {
 	return &server
 }
 
+// Adds an active session to the count for an IP address
+// ip - The IP address
+// Returns true if it was added, false if it reached the limit
 func (server *RTMPServer) AddIP(ip string) bool {
 	server.ip_mutex.Lock()
 	defer server.ip_mutex.Unlock()
@@ -149,6 +166,9 @@ func (server *RTMPServer) AddIP(ip string) bool {
 	return true
 }
 
+// Checks if an IP address if exempted from the IP limit
+// ipStr - The IP address
+// Returns true if exempted
 func (server *RTMPServer) isIPExempted(ipStr string) bool {
 	r := os.Getenv("CONCURRENT_LIMIT_WHITELIST")
 
@@ -180,6 +200,9 @@ func (server *RTMPServer) isIPExempted(ipStr string) bool {
 	return false
 }
 
+// Removes an active session from the count of an IP
+// Call after the session is closed
+// ip - The IP address
 func (server *RTMPServer) RemoveIP(ip string) {
 	server.ip_mutex.Lock()
 	defer server.ip_mutex.Unlock()
@@ -193,15 +216,18 @@ func (server *RTMPServer) RemoveIP(ip string) {
 	}
 }
 
+// Generates an unique session ID
 func (server *RTMPServer) NextSessionID() uint64 {
-	server.mutex.Lock()
-	defer server.mutex.Unlock()
+	server.session_id_mutex.Lock()
+	defer server.session_id_mutex.Unlock()
 
 	r := server.next_session_id
 	server.next_session_id++
 	return r
 }
 
+// Adds a session to the list
+// s - The session
 func (server *RTMPServer) AddSession(s *RTMPSession) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -209,6 +235,8 @@ func (server *RTMPServer) AddSession(s *RTMPSession) {
 	server.sessions[s.id] = s
 }
 
+// Removes a session from the list
+// id - The session ID
 func (server *RTMPServer) RemoveSession(id uint64) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -216,6 +244,9 @@ func (server *RTMPServer) RemoveSession(id uint64) {
 	delete(server.sessions, id)
 }
 
+// Checks if there is an active stream being published on a given channel
+// channel - Channel ID
+// Returns true if active publishing
 func (server *RTMPServer) isPublishing(channel string) bool {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -223,6 +254,9 @@ func (server *RTMPServer) isPublishing(channel string) bool {
 	return server.channels[channel] != nil && server.channels[channel].is_publishing
 }
 
+// Obtains a reference to the session that is publishing on a given channel
+// channel - The channel ID
+// Returns the reference, or nil
 func (server *RTMPServer) GetPublisher(channel string) *RTMPSession {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -239,6 +273,12 @@ func (server *RTMPServer) GetPublisher(channel string) *RTMPSession {
 	return server.sessions[id]
 }
 
+// Sets a publisher and a stream for a given channel
+// channel - The channel ID
+// key - The channel key
+// stream_id - The stream ID
+// s - The session that is publishing
+// Returns true if success, false if there was another session publishing
 func (server *RTMPServer) SetPublisher(channel string, key string, stream_id string, s *RTMPSession) bool {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -267,6 +307,8 @@ func (server *RTMPServer) SetPublisher(channel string, key string, stream_id str
 	return true
 }
 
+// Removes the current publisher for a given channel
+// channel - The channel ID
 func (server *RTMPServer) RemovePublisher(channel string) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -293,6 +335,9 @@ func (server *RTMPServer) RemovePublisher(channel string) {
 	}
 }
 
+// Obtains the list of idle players for a given channel
+// channel - The channel ID
+// Returns the list of sessions waiting to play the stream
 func (server *RTMPServer) GetIdlePlayers(channel string) []*RTMPSession {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -315,6 +360,9 @@ func (server *RTMPServer) GetIdlePlayers(channel string) []*RTMPSession {
 	return playersToStart
 }
 
+// Obtains the list of players for a given channel
+// channel - The channel ID
+// Returns the list of sessions playing the stream
 func (server *RTMPServer) GetPlayers(channel string) []*RTMPSession {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -337,7 +385,14 @@ func (server *RTMPServer) GetPlayers(channel string) []*RTMPSession {
 	return playersToStart
 }
 
-func (server *RTMPServer) AddPlayer(channel string, key string, s *RTMPSession) (bool, error) {
+// Adds a player to a given channel
+// channel - The channel ID
+// key - The channel key used by the player
+// s - The session
+// Returns:
+//   idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
+//   err - Error. If not nil, it means the channel of the key are not valid
+func (server *RTMPServer) AddPlayer(channel string, key string, s *RTMPSession) (idling bool, err error) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
 
@@ -368,7 +423,10 @@ func (server *RTMPServer) AddPlayer(channel string, key string, s *RTMPSession) 
 	return s.isIdling, nil
 }
 
-func (server *RTMPServer) RemovePlayer(channel string, key string, s *RTMPSession) {
+// Removes a player from a channel
+// channel - The channel ID
+// s - The session
+func (server *RTMPServer) RemovePlayer(channel string, s *RTMPSession) {
 	if server.channels[channel] == nil {
 		return
 	}
@@ -383,6 +441,9 @@ func (server *RTMPServer) RemovePlayer(channel string, key string, s *RTMPSessio
 	}
 }
 
+// Runs a loop to indefinitely accept incoming connections
+// listener - The TCP listener
+// wg - The waiting group
 func (server *RTMPServer) AcceptConnections(listener net.Listener, wg *sync.WaitGroup) {
 	defer func() {
 		listener.Close()
@@ -415,6 +476,9 @@ func (server *RTMPServer) AcceptConnections(listener net.Listener, wg *sync.Wait
 	}
 }
 
+// Sends pings to active sessions
+// Runs a loop indefinitely. Call in a separate routine.
+// wg - The waiting group
 func (server *RTMPServer) SendPings(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for !server.closed {
@@ -432,6 +496,7 @@ func (server *RTMPServer) SendPings(wg *sync.WaitGroup) {
 	}
 }
 
+// Starts the server
 func (server *RTMPServer) Start() {
 	// Initialize websocket connection
 	server.websocketControlConnection.Initialize(server)
@@ -454,6 +519,10 @@ func (server *RTMPServer) Start() {
 	wg.Wait()
 }
 
+// Handles a connection
+// id - Session ID
+// ip - Client IP address
+// c - The TCP connection
 func (server *RTMPServer) HandleConnection(id uint64, ip string, c net.Conn) {
 	s := CreateRTMPSession(server, id, ip, c)
 
@@ -480,6 +549,8 @@ func (server *RTMPServer) HandleConnection(id uint64, ip string, c net.Conn) {
 	s.HandleSession()
 }
 
+// Returns the server chunk size for outgoing packets
+// Returns the chunk size in bytes
 func (server *RTMPServer) getOutChunkSize() uint32 {
 	r := os.Getenv("RTMP_CHUNK_SIZE")
 
