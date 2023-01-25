@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"files.exclude": {
+			"coordinator": true,
+			"coordinator.exe": true,
 		},
 	}
 }

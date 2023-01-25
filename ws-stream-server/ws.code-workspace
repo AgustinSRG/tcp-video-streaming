@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"files.exclude": {
+			"ws-stream-server": true,
+			"ws-stream-server.exe": true
 		},
 	}
 }
