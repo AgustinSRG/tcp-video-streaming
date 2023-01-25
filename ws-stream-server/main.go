@@ -6,12 +6,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const VERSION = "1.0.0"
+
 func main() {
 	godotenv.Load() // Load env vars
 
 	InitLog()
 
-	LogInfo("Websocket streaming server (Version 1.0.0)")
+	LogInfo("Started Websocket streaming server - Version " + VERSION)
 
 	server := WS_Streaming_Server{}
 

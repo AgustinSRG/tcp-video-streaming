@@ -12,10 +12,13 @@ import (
 	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
-var ID_MAX_LENGTH = 128
-var idCustomMaxLength = os.Getenv("ID_MAX_LENGTH")
-
+// Validates stream ID
+// str - Received stream ID
+// Returns true only if valid
 func validateStreamIDString(str string) bool {
+	var ID_MAX_LENGTH = 128
+	var idCustomMaxLength = os.Getenv("ID_MAX_LENGTH")
+
 	if idCustomMaxLength != "" {
 		var e error
 		ID_MAX_LENGTH, e = strconv.Atoi(idCustomMaxLength)
@@ -37,6 +40,9 @@ func validateStreamIDString(str string) bool {
 	return m
 }
 
+// Checks if a session is allowed to play streams
+// ipStr - The client IP address
+// Returns true only if allowed
 func checkSessionCanPlay(ipStr string) bool {
 	playWhiteList := os.Getenv("PLAY_WHITELIST")
 

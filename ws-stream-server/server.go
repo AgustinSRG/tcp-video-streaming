@@ -16,34 +16,40 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Status data for the streaming server
 type WS_Streaming_Server struct {
-	wsUpgrader        *websocket.Upgrader
-	controlConnection *ControlServerConnection
+	wsUpgrader *websocket.Upgrader // Upgrader to handle websocket connections
 
-	nextSessionId uint64
-	sessionIdLock *sync.Mutex
+	controlConnection *ControlServerConnection // Connection to the coordinator server
 
-	ipCount       map[string]uint32
-	mutexIpCount  *sync.Mutex
-	ipLimit       uint32
-	gopCacheLimit int64
+	nextSessionId uint64      // ID for the next session
+	sessionIdLock *sync.Mutex // Mutex to ensure session IDs are unique
 
-	mutex    *sync.Mutex
-	sessions map[uint64]*WS_Streaming_Session
-	channels map[string]*WS_Streaming_Channel
+	ipLimit      uint32            // Max active connections allowed for each IP address
+	ipCount      map[string]uint32 // IP -> Active connection count
+	mutexIpCount *sync.Mutex       // Mutex to control access to ipCount
 
-	staticTestHandler http.Handler
+	gopCacheLimit int64 // GOP cache size limit (bytes)
+
+	sessions map[uint64]*WS_Streaming_Session // List of active sessions
+	channels map[string]*WS_Streaming_Channel // List of active streaming channels
+
+	mutex *sync.Mutex // Mutex to control the access to the status data (channels, sessions)
+
+	staticTestHandler http.Handler // Static HTTP handles for browser testing
 }
 
+// Stores the status data for a streaming channel
 type WS_Streaming_Channel struct {
-	channel       string
-	key           string
-	stream_id     string
-	publisher     uint64
-	is_publishing bool
-	players       map[uint64]bool
+	channel       string          // Channel ID
+	key           string          // Streaming key
+	stream_id     string          // Stream ID
+	publisher     uint64          // Session ID of the publisher
+	is_publishing bool            // True if the channel is being published
+	players       map[uint64]bool // List of sessions playing the stream
 }
 
+// Initializes the streaming server
 func (server *WS_Streaming_Server) Initialize() {
 	server.wsUpgrader = &websocket.Upgrader{}
 	server.wsUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -98,6 +104,7 @@ func (server *WS_Streaming_Server) getNewSessionId() uint64 {
 	return server.nextSessionId
 }
 
+// Starts the server
 func (server *WS_Streaming_Server) Start() {
 	server.controlConnection.Initialize(server) // Initialize control connection
 
@@ -111,6 +118,8 @@ func (server *WS_Streaming_Server) Start() {
 	wg.Wait()
 }
 
+// Runs the HTTP server
+// wg - Waiting group
 func (server *WS_Streaming_Server) runHTTPServer(wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
@@ -138,6 +147,8 @@ func (server *WS_Streaming_Server) runHTTPServer(wg *sync.WaitGroup) {
 	}
 }
 
+// Runs the HTTPS server
+// wg - Waiting group
 func (server *WS_Streaming_Server) runHTTPSecureServer(wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
@@ -170,6 +181,9 @@ func (server *WS_Streaming_Server) runHTTPSecureServer(wg *sync.WaitGroup) {
 	}
 }
 
+// Handles each HTTP request
+// w - Writer to send the response
+// req - Client request
 func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	sessionId := server.getNewSessionId()
 
@@ -178,7 +192,7 @@ func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Re
 	if err != nil {
 		LogError(err)
 		w.WriteHeader(200)
-		fmt.Fprintf(w, "Websocket streaming server (Version 1.0.0)")
+		fmt.Fprintf(w, "Websocket streaming server - Version "+VERSION)
 		return
 	}
 
@@ -191,7 +205,7 @@ func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Re
 			server.staticTestHandler.ServeHTTP(w, req)
 		} else if req.RequestURI == "/" {
 			w.WriteHeader(200)
-			fmt.Fprintf(w, "Websocket streaming server (Version 1.0.0)")
+			fmt.Fprintf(w, "Websocket streaming server - Version "+VERSION)
 		} else {
 			w.WriteHeader(404)
 			fmt.Fprintf(w, "Not found.")
@@ -211,6 +225,8 @@ func (server *WS_Streaming_Server) ServeHTTP(w http.ResponseWriter, req *http.Re
 	server.HandleStreamingSession(sessionId, w, req, ip, parts[1], parts[2], parts[3])
 }
 
+// Adds a session to the list
+// s - Session
 func (server *WS_Streaming_Server) AddSession(s *WS_Streaming_Session) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -218,6 +234,8 @@ func (server *WS_Streaming_Server) AddSession(s *WS_Streaming_Session) {
 	server.sessions[s.id] = s
 }
 
+// Removes a session from the list
+// id - Session ID
 func (server *WS_Streaming_Server) RemoveSession(id uint64) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -225,6 +243,9 @@ func (server *WS_Streaming_Server) RemoveSession(id uint64) {
 	delete(server.sessions, id)
 }
 
+// Checks if there is an active stream being published on a given channel
+// channel - Channel ID
+// Returns true if active publishing
 func (server *WS_Streaming_Server) isPublishing(channel string) bool {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -232,6 +253,9 @@ func (server *WS_Streaming_Server) isPublishing(channel string) bool {
 	return server.channels[channel] != nil && server.channels[channel].is_publishing
 }
 
+// Obtains a reference to the session that is publishing on a given channel
+// channel - The channel ID
+// Returns the reference, or nil
 func (server *WS_Streaming_Server) GetPublisher(channel string) *WS_Streaming_Session {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -248,6 +272,12 @@ func (server *WS_Streaming_Server) GetPublisher(channel string) *WS_Streaming_Se
 	return server.sessions[id]
 }
 
+// Sets a publisher and a stream for a given channel
+// channel - The channel ID
+// key - The channel key
+// stream_id - The stream ID
+// s - The session that is publishing
+// Returns true if success, false if there was another session publishing
 func (server *WS_Streaming_Server) SetPublisher(channel string, key string, stream_id string, s *WS_Streaming_Session) bool {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -276,6 +306,8 @@ func (server *WS_Streaming_Server) SetPublisher(channel string, key string, stre
 	return true
 }
 
+// Removes the current publisher for a given channel
+// channel - The channel ID
 func (server *WS_Streaming_Server) RemovePublisher(channel string) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -302,6 +334,9 @@ func (server *WS_Streaming_Server) RemovePublisher(channel string) {
 	}
 }
 
+// Obtains the list of idle players for a given channel
+// channel - The channel ID
+// Returns the list of sessions waiting to play the stream
 func (server *WS_Streaming_Server) GetIdlePlayers(channel string) []*WS_Streaming_Session {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -324,6 +359,9 @@ func (server *WS_Streaming_Server) GetIdlePlayers(channel string) []*WS_Streamin
 	return playersToStart
 }
 
+// Obtains the list of players for a given channel
+// channel - The channel ID
+// Returns the list of sessions playing the stream
 func (server *WS_Streaming_Server) GetPlayers(channel string) []*WS_Streaming_Session {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
@@ -346,7 +384,14 @@ func (server *WS_Streaming_Server) GetPlayers(channel string) []*WS_Streaming_Se
 	return playersToStart
 }
 
-func (server *WS_Streaming_Server) AddPlayer(channel string, key string, s *WS_Streaming_Session) (bool, error) {
+// Adds a player to a given channel
+// channel - The channel ID
+// key - The channel key used by the player
+// s - The session
+// Returns:
+//   idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
+//   err - Error. If not nil, it means the channel of the key are not valid
+func (server *WS_Streaming_Server) AddPlayer(channel string, key string, s *WS_Streaming_Session) (idling bool, err error) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
 
@@ -377,6 +422,9 @@ func (server *WS_Streaming_Server) AddPlayer(channel string, key string, s *WS_S
 	return s.isIdling, nil
 }
 
+// Removes a player from a channel
+// channel - The channel ID
+// s - The session
 func (server *WS_Streaming_Server) RemovePlayer(channel string, key string, s *WS_Streaming_Session) {
 	if server.channels[channel] == nil {
 		return
