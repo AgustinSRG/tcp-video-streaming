@@ -8,6 +8,9 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// Creates an authentication token to connect
+// to the coordinator server
+// Returns the token (base 64)
 func MakeWebsocketAuthenticationToken() string {
 	secret := os.Getenv("CONTROL_SECRET")
 

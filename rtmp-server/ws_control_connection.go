@@ -13,27 +13,35 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Status data of the connection with the coordinator server
 type ControlServerConnection struct {
-	server        *RTMPServer
-	connectionURL string
-	connection    *websocket.Conn
-	lock          *sync.Mutex
-	nextRequestId uint64
-	enabled       bool
+	server *RTMPServer // Reference to the RTMP server
 
-	requests map[string]*ControlServerPendingRequest
+	connectionURL string          // Connection URL
+	connection    *websocket.Conn // Websocket connection
+
+	lock *sync.Mutex // Mutex to control access to this struct
+
+	nextRequestId uint64 // ID for the next request ID
+
+	requests map[string]*ControlServerPendingRequest // Pending requests. Map: ID -> Request status data
+
+	enabled bool // True if the connection is enabled (will reconnect)
 }
 
+// Status data for a pending request
 type ControlServerPendingRequest struct {
-	waiter chan PublishResponse
+	waiter chan PublishResponse // Channel to wait for the response
 }
 
+// Response for a publish request
 type PublishResponse struct {
-	accepted bool
-	streamId string
+	accepted bool   // True if accepted, false if denied
+	streamId string // IF accepted, the stream ID
 }
 
 // Initializes connection
+// server - Reference to the RTMP server
 func (c *ControlServerConnection) Initialize(server *RTMPServer) {
 	c.server = server
 	c.lock = &sync.Mutex{}
@@ -168,6 +176,7 @@ func (c *ControlServerConnection) GetNextRequestId() uint64 {
 }
 
 // Reads messages until the connection is finished
+// conn - Websocket connection
 func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 	for {
 		err := conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -211,6 +220,9 @@ func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
 	}
 }
 
+// Handles a PUBLISH-ACCEPT message
+// requestId - Request ID
+// streamId - Stream ID
 func (c *ControlServerConnection) OnPublishAccept(requestId string, streamId string) {
 	c.lock.Lock()
 	req := c.requests[requestId]
@@ -228,6 +240,8 @@ func (c *ControlServerConnection) OnPublishAccept(requestId string, streamId str
 	req.waiter <- res
 }
 
+// Handles a PUBLISH-DENY message
+// requestId - Request ID
 func (c *ControlServerConnection) OnPublishDeny(requestId string) {
 	c.lock.Lock()
 	req := c.requests[requestId]
@@ -245,6 +259,9 @@ func (c *ControlServerConnection) OnPublishDeny(requestId string) {
 	req.waiter <- res
 }
 
+// Handles a STREAM-KILL message
+// channel - Streaming channel
+// streamId - Stream ID or the * wildcard
 func (c *ControlServerConnection) OnStreamKill(channel string, streamId string) {
 	if streamId == "*" || streamId == "" {
 		publisher := c.server.GetPublisher(channel)
@@ -337,6 +354,7 @@ func (c *ControlServerConnection) RequestPublish(channel string, key string, use
 // Send Publish-End message to the coordinator server
 // channel - Streaming channel
 // streamId - Streaming session ID
+// Returns true if success
 func (c *ControlServerConnection) PublishEnd(channel string, streamId string) bool {
 	msgParams := make(map[string]string)
 
