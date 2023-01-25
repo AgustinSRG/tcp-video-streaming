@@ -37,7 +37,7 @@ type ControlServerPendingRequest struct {
 // Response for a publish request
 type PublishResponse struct {
 	accepted bool   // True if accepted, false if denied
-	streamId string // IF accepted, the stream ID
+	streamId string // If accepted, the stream ID
 }
 
 // Initializes connection

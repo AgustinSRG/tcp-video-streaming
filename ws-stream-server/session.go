@@ -4,7 +4,6 @@ package main
 
 import (
 	"container/list"
-	"crypto/subtle"
 	"fmt"
 	"math"
 	"net/http"
@@ -15,55 +14,68 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Cache to compute bit-rate
+// Structure to store the bitrate status
 type BitRateCache struct {
-	intervalMs int64
-	lastUpdate int64
-	bytes      uint64
+	intervalMs int64  // Interval of milliseconds to update
+	lastUpdate int64  // Last time updated (unix millis)
+	bytes      uint64 // The number of bytes received
 }
 
 const (
 	DATA_STREAM_PACKET_BASE_SIZE = 16
 )
 
+// Chunk of a sta stream
 type DataStreamChunk struct {
-	data []byte
-	size int
+	data []byte // The data
+	size int    // The size (bytes)
 }
 
 // Status for a streaming session
 type WS_Streaming_Session struct {
-	id uint64
+	server *WS_Streaming_Server // Reference to the server
 
-	server       *WS_Streaming_Server
-	conn         *websocket.Conn
-	ip           string
-	mutex        *sync.Mutex
-	publishMutex *sync.Mutex
-	closed       bool
+	conn *websocket.Conn // Websocket connection
 
-	channel  string
-	key      string
-	streamId string
+	id uint64 // Session ID
+	ip string // IP address of the client
 
-	isPublishing bool
-	isPlaying    bool
-	isProbing    bool
-	isIdling     bool
-	chunksCount  int64
+	mutex *sync.Mutex // Mutex to control access to the session status data
 
-	gopCache         *list.List
-	gopCacheSize     int64
-	gopCacheLimit    int64
-	gopCacheDisabled bool
-	gopPlayNo        bool
-	gopPlayClear     bool
+	publishMutex *sync.Mutex // Mutex to control the publishing group
 
-	bitRate      uint64
-	bitRateCache BitRateCache
+	closed bool // True if the connection is closed
+
+	channel  string // Streaming channel ID
+	key      string // Streaming key
+	streamId string // Stream ID
+
+	isPublishing bool // True if the connection is publishing a stream
+	isPlaying    bool // True if the connection is receiving a stream
+	isProbing    bool // True if the connection is probing the stream
+	isIdling     bool // True if the connection is waiting for the stream
+
+	chunksCount int64 // Total data chunks sent
+
+	gopCache         *list.List // List to store the GOP cache
+	gopCacheSize     int64      // Current GOP cache size
+	gopCacheLimit    int64      // GOP cache size limit
+	gopCacheDisabled bool       // True if the cache is currently disabled
+	gopPlayNo        bool       // True if the client refuses to receive the cache packets
+	gopPlayClear     bool       // True if the clients is requesting to clear the cache
+
+	bitRate      uint64       // Bitrate (bit/ms)
+	bitRateCache BitRateCache // Cache to compute bitrate
 }
 
 // Handles incoming connection
+// sessionId - Session ID
+// w - Writer to send the response
+// req - Client request
+// ip - Client IP
+// channel - Streaming channel ID
+// key - Streaming key
+// connectionKind - Connection kind
 func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w http.ResponseWriter, req *http.Request, ip string, channel string, key string, connectionKind string) {
 	var isPublishing bool
 	var isPlaying bool
@@ -188,6 +200,8 @@ func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w ht
 	go session.Run()
 }
 
+// Sends a text message to the client
+// txt - Message contents
 func (session *WS_Streaming_Session) SendText(txt string) error {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
@@ -195,6 +209,8 @@ func (session *WS_Streaming_Session) SendText(txt string) error {
 	return session.conn.WriteMessage(websocket.TextMessage, []byte(txt))
 }
 
+// Sends a chunk to the client
+// chunkData - Chunk to send
 func (session *WS_Streaming_Session) SendChunk(chunkData []byte) {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
@@ -211,6 +227,8 @@ func (session *WS_Streaming_Session) SendChunk(chunkData []byte) {
 	}
 }
 
+// Periodically sends heartbeat messages to the client
+// Loops until the connection is closed
 func (session *WS_Streaming_Session) SendHeartBeatMessages() {
 	for {
 		time.Sleep(20 * time.Second)
@@ -223,6 +241,7 @@ func (session *WS_Streaming_Session) SendHeartBeatMessages() {
 	}
 }
 
+// Closes the connection
 func (session *WS_Streaming_Session) Kill() {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
@@ -230,6 +249,7 @@ func (session *WS_Streaming_Session) Kill() {
 	session.conn.Close()
 }
 
+// Runs the connection, reading the incoming messages until the connection is closed
 func (session *WS_Streaming_Session) Run() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -327,14 +347,19 @@ func (session *WS_Streaming_Session) Run() {
 	}
 }
 
+// Logs a message for this connection
+// str - message to log
 func (session *WS_Streaming_Session) log(str string) {
 	LogRequest(session.id, session.ip, str)
 }
 
+// Logs a debug message for this connection
+// str - message to log
 func (session *WS_Streaming_Session) debug(str string) {
 	LogDebugSession(session.id, session.ip, str)
 }
 
+// Call after the connection is closed
 func (session *WS_Streaming_Session) onClose() {
 	if session.isPublishing {
 		session.EndPublish()
@@ -343,151 +368,5 @@ func (session *WS_Streaming_Session) onClose() {
 		session.server.RemovePlayer(session.channel, session.key, session)
 		session.isPlaying = false
 		session.isIdling = false
-	}
-}
-
-func (session *WS_Streaming_Session) StartPlayer(player *WS_Streaming_Session) {
-	session.publishMutex.Lock()
-	defer session.publishMutex.Unlock()
-
-	if !session.isPublishing {
-		player.isPlaying = false
-		player.isIdling = true
-		player.log("PLAY IDLE '" + player.channel + "'")
-		return
-	}
-
-	player.log("PLAY START '" + player.channel + "'")
-
-	if !player.gopPlayNo && session.gopCache.Len() > 0 {
-		for t := session.gopCache.Front(); t != nil; t = t.Next() {
-			chunks := t.Value
-			switch x := chunks.(type) {
-			case *DataStreamChunk:
-				player.SendChunk(x.data)
-			}
-		}
-	}
-
-	player.isPlaying = true
-	player.isIdling = false
-
-	if player.gopPlayClear {
-		session.gopCache = list.New()
-		session.gopCacheSize = 0
-		session.gopCacheDisabled = true
-	}
-}
-
-func (session *WS_Streaming_Session) StartIdlePlayers() {
-	session.publishMutex.Lock()
-	defer session.publishMutex.Unlock()
-
-	// Start idle players
-	idlePlayers := session.server.GetIdlePlayers(session.channel)
-
-	for i := 0; i < len(idlePlayers); i++ {
-		player := idlePlayers[i]
-		if subtle.ConstantTimeCompare([]byte(session.key), []byte(player.key)) == 1 {
-			player.log("PLAY START '" + player.channel + "'")
-
-			if !player.gopPlayNo && session.gopCache.Len() > 0 {
-				for t := session.gopCache.Front(); t != nil; t = t.Next() {
-					chunks := t.Value
-					switch x := chunks.(type) {
-					case *DataStreamChunk:
-						player.SendChunk(x.data)
-					}
-				}
-			}
-
-			player.isPlaying = true
-			player.isIdling = false
-
-			if player.gopPlayClear {
-				session.gopCache = list.New()
-				session.gopCacheSize = 0
-				session.gopCacheDisabled = true
-			}
-		} else {
-			player.log("Error: Invalid stream key provided")
-			player.SendText("ERROR: Invalid streaming key")
-			player.Kill()
-		}
-	}
-}
-
-func (session *WS_Streaming_Session) HandleChunk(data []byte) {
-	chunkLength := len(data)
-	chunk := DataStreamChunk{
-		data: data,
-		size: chunkLength,
-	}
-
-	session.publishMutex.Lock()
-	defer session.publishMutex.Unlock()
-
-	if !session.isPublishing {
-		return
-	}
-
-	// GOP cache
-
-	if !session.gopCacheDisabled {
-		session.gopCache.PushBack(&chunk)
-		session.gopCacheSize += int64(chunkLength) + DATA_STREAM_PACKET_BASE_SIZE
-
-		for session.gopCacheSize > session.gopCacheLimit {
-			toDelete := session.gopCache.Front()
-			v := toDelete.Value
-			switch x := v.(type) {
-			case *DataStreamChunk:
-				session.gopCacheSize -= int64(x.size)
-			}
-			session.gopCache.Remove(toDelete)
-			session.gopCacheSize -= DATA_STREAM_PACKET_BASE_SIZE
-		}
-	}
-
-	// Players
-
-	players := session.server.GetPlayers(session.channel)
-
-	for i := 0; i < len(players); i++ {
-		if players[i].isPlaying {
-			players[i].SendChunk(data)
-		}
-	}
-}
-
-func (session *WS_Streaming_Session) EndPublish() {
-	session.publishMutex.Lock()
-	defer session.publishMutex.Unlock()
-
-	if session.isPublishing {
-
-		session.log("PUBLISH END '" + session.channel + "'")
-
-		players := session.server.GetPlayers(session.channel)
-
-		for i := 0; i < len(players); i++ {
-			players[i].isIdling = true
-			players[i].isPlaying = false
-			players[i].log("PLAY END '" + players[i].channel + "'")
-			players[i].Kill()
-		}
-
-		session.server.RemovePublisher(session.channel)
-
-		session.gopCache = list.New()
-
-		session.isPublishing = false
-
-		// Send event
-		if session.server.controlConnection.PublishEnd(session.channel, session.streamId) {
-			session.debug("Stop event sent")
-		} else {
-			session.debug("Could not send stop event")
-		}
 	}
 }

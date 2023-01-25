@@ -73,7 +73,7 @@ type RTMPSession struct {
 
 	clock int64 // Current clock value
 
-	rtmpGopcache     *list.List // List to stote the GOP cache
+	rtmpGopcache     *list.List // List to store the GOP cache
 	gopCacheSize     int64      // Current GOP cache size
 	gopCacheLimit    int64      // GOP cache size limit
 	gopCacheDisabled bool       // True if the cache is currently disabled
