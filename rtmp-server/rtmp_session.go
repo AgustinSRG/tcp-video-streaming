@@ -15,70 +15,83 @@ import (
 	"time"
 )
 
+// Structure to store the bitrate status
 type BitrateCache struct {
-	intervalMs  int64
-	last_update int64
-	bytes       uint64
+	intervalMs  int64  // Interval of milliseconds to update
+	last_update int64  // Last time updated (unix millis)
+	bytes       uint64 // The number of bytes received
 }
 
+// Stores the status of a RTMP session
 type RTMPSession struct {
-	server        *RTMPServer
-	conn          net.Conn
-	ip            string
-	mutex         *sync.Mutex
-	publish_mutex *sync.Mutex
+	server *RTMPServer // Reference to the server
 
-	id uint64
+	conn net.Conn // TCP connection
 
-	inChunkSize  uint32
-	outChunkSize uint32
+	id uint64 // Session ID
+	ip string // IP address of the client
 
-	inPackets map[uint32]*RTMPPacket
+	inChunkSize  uint32 // Chunk size of incoming packets
+	outChunkSize uint32 //  Chunks size for outgoing packets
 
-	ackSize   uint32
-	inAckSize uint32
-	inLastAck uint32
+	ackSize   uint32 // Acknowledge size required by the client
+	inAckSize uint32 // Amount of bytes acknowledged
+	inLastAck uint32 // This is used to count bytes that must be acknowledged
 
-	objectEncoding  uint32
-	connectTime     int64
-	playStreamId    uint32
-	publishStreamId uint32
+	objectEncoding uint32 // Encoding format required by the client
 
-	receive_audio bool
-	receive_video bool
+	connectTime int64 // Connection time (unix millis)
 
-	channel   string
-	key       string
-	stream_id string
+	mutex *sync.Mutex // Mutex to control access to the session status data
 
-	isConnected  bool
-	isPublishing bool
-	isPlaying    bool
-	isIdling     bool
-	isPause      bool
+	publish_mutex *sync.Mutex // Mutex to control the publishing group
 
-	metaData          []byte
-	audioCodec        uint32
-	videoCodec        uint32
-	aacSequenceHeader []byte
-	avcSequenceHeader []byte
-	clock             int64
+	inPackets map[uint32]*RTMPPacket // RTMP packets storage. Map: Channel ID -> Packet. Packets are received in chunks, so they are stored until the last chunk is received.
 
-	rtmpGopcache     *list.List
-	gopCacheSize     int64
-	gopCacheLimit    int64
-	gopCacheDisabled bool
-	gopPlayNo        bool
-	gopPlayClear     bool
+	playStreamId    uint32 // ID of the stream being played
+	publishStreamId uint32 // ID of the stream being published
+	streams         uint32 // Number of associated streams
 
-	streams uint32
+	receive_audio bool // True if the client wants to receive audio packets
+	receive_video bool // True if the client want to receive video packets
 
-	bitrate       uint64
-	bitrate_cache BitrateCache
+	channel   string // Streaming channel ID
+	key       string // Streaming key
+	stream_id string // Stream ID
+
+	isConnected  bool // True if the client sent the connect message
+	isPublishing bool // True if the client is publishing
+	isPlaying    bool // True if the client is playing
+	isIdling     bool // True if the client is waiting to play a stream
+	isPause      bool // True if the client is paused
+
+	metaData          []byte // Metadata for the stream being published
+	audioCodec        uint32 // Audio codec
+	videoCodec        uint32 // Video codec
+	aacSequenceHeader []byte // Sequence header for AAC codec (Audio)
+	avcSequenceHeader []byte // Seque4nce header for AVC codec (Video)
+
+	clock int64 // Current clock value
+
+	rtmpGopcache     *list.List // List to stote the GOP cache
+	gopCacheSize     int64      // Current GOP cache size
+	gopCacheLimit    int64      // GOP cache size limit
+	gopCacheDisabled bool       // True if the cache is currently disabled
+	gopPlayNo        bool       // True if the client refuses to receive the cache packets
+	gopPlayClear     bool       // True if the clients is requesting to clear the cache
+
+	bitrate       uint64       // Bitrate (bit/ms)
+	bitrate_cache BitrateCache // Cache to compute bitrate
 }
 
-func CreateRTMPSession(server *RTMPServer, id uint64, ip string, c net.Conn) RTMPSession {
-	return RTMPSession{
+// Creates a RTMP session
+// server - Server that accepted the connection
+// id - Session ID
+// ip - Client IP address
+// c - TCP connection
+// Returns the session
+func CreateRTMPSession(server *RTMPServer, id uint64, ip string, c net.Conn) *RTMPSession {
+	return &RTMPSession{
 		server:        server,
 		conn:          c,
 		ip:            ip,
@@ -133,6 +146,8 @@ func CreateRTMPSession(server *RTMPServer, id uint64, ip string, c net.Conn) RTM
 	}
 }
 
+// Sends data to the client
+// b - The bytes to send
 func (s *RTMPSession) SendSync(b []byte) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -140,6 +155,7 @@ func (s *RTMPSession) SendSync(b []byte) {
 	s.conn.Write(b)
 }
 
+// Closes the connection
 func (s *RTMPSession) Kill() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -147,10 +163,13 @@ func (s *RTMPSession) Kill() {
 	s.conn.Close()
 }
 
+// Returns the stream path: /{CHANNEL}/{KEY}
 func (s *RTMPSession) GetStreamPath() string {
 	return "/" + s.channel + "/" + s.key
 }
 
+// Handles the session
+// Does the handshake and starts reading the chunks
 func (s *RTMPSession) HandleSession() {
 	r := bufio.NewReader(s.conn)
 
@@ -199,6 +218,9 @@ func (s *RTMPSession) HandleSession() {
 	}
 }
 
+// Reads a chunk
+// r - Buffered reader associated with the TCP connection
+// Returns true if success, false if the connection is closed
 func (s *RTMPSession) ReadChunk(r *bufio.Reader) bool {
 	var bytesReadCount uint32
 	bytesReadCount = 0
@@ -400,12 +422,14 @@ func (s *RTMPSession) ReadChunk(r *bufio.Reader) bool {
 		s.bitrate = uint64(math.Round(float64(s.bitrate_cache.bytes) * 8 / float64(diff)))
 		s.bitrate_cache.bytes = 0
 		s.bitrate_cache.last_update = now
-		LogDebugSession(s.id, s.ip, "Bitrate is now: "+strconv.Itoa(int(s.bitrate)))
+		LogDebugSession(s.id, s.ip, "Bitrate is now: "+strconv.Itoa(int(s.bitrate))+" bit/ms")
 	}
 
 	return true
 }
 
+// Handles a packet
+// packet - The received packet
 func (s *RTMPSession) HandlePacket(packet *RTMPPacket) bool {
 	switch packet.header.packet_type {
 	case RTMP_TYPE_SET_CHUNK_SIZE:
@@ -440,6 +464,8 @@ func (s *RTMPSession) HandlePacket(packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles an INVOKE packet
+// packet - The packet
 func (s *RTMPSession) HandleInvoke(packet *RTMPPacket) bool {
 	var offset uint32
 	if packet.header.packet_type == RTMP_TYPE_FLEX_MESSAGE {
@@ -478,6 +504,8 @@ func (s *RTMPSession) HandleInvoke(packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles a connect command
+// cmd - The command
 func (s *RTMPSession) HandleConnect(cmd *RTMPCommand) bool {
 	s.channel = cmd.GetArg("cmdObj").GetProperty("app").GetString()
 
@@ -506,6 +534,8 @@ func (s *RTMPSession) HandleConnect(cmd *RTMPCommand) bool {
 	return true
 }
 
+// Handles a createStream command
+// cmd - The command
 func (s *RTMPSession) HandleCreateStream(cmd *RTMPCommand) bool {
 	transId := cmd.GetArg("transId").GetInteger()
 	s.RespondCreateStream(transId)
@@ -513,6 +543,9 @@ func (s *RTMPSession) HandleCreateStream(cmd *RTMPCommand) bool {
 	return true
 }
 
+// Handles a publish command
+// cmd - The command
+// packet - The packet
 func (s *RTMPSession) HandlePublish(cmd *RTMPCommand, packet *RTMPPacket) bool {
 	sKeyPath := cmd.GetArg("streamName").GetString()
 	sKeyPathSplit := strings.Split(sKeyPath, "?")
@@ -562,6 +595,9 @@ func (s *RTMPSession) HandlePublish(cmd *RTMPCommand, packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles a play command
+// cmd - The command
+// packet - The packet
 func (s *RTMPSession) HandlePlay(cmd *RTMPCommand, packet *RTMPPacket) bool {
 	sKeyPath := cmd.GetArg("streamName").GetString()
 	sKeyPathSplit := strings.Split(sKeyPath, "?")
@@ -615,6 +651,8 @@ func (s *RTMPSession) HandlePlay(cmd *RTMPCommand, packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles a pause command
+// cmd - The command
 func (s *RTMPSession) HandlePause(cmd *RTMPCommand) bool {
 	if !s.isPlaying {
 		return true
@@ -643,6 +681,8 @@ func (s *RTMPSession) HandlePause(cmd *RTMPCommand) bool {
 	return true
 }
 
+// Handles a deleteStream command
+// cmd - The command
 func (s *RTMPSession) HandleDeleteStream(cmd *RTMPCommand) bool {
 	streamId := uint32(cmd.GetArg("streamId").GetInteger())
 
@@ -673,8 +713,9 @@ func (s *RTMPSession) HandleDeleteStream(cmd *RTMPCommand) bool {
 	return true
 }
 
+// Deletes a stream
+// streamId - ID of the stream
 func (s *RTMPSession) DeleteStream(streamId uint32) {
-
 	if streamId == s.playStreamId {
 		// Close play
 		LogDebugSession(s.id, s.ip, "Close play stream: "+strconv.Itoa(int(streamId)))
@@ -698,6 +739,9 @@ func (s *RTMPSession) DeleteStream(streamId uint32) {
 	}
 }
 
+// Handles a closeStream command
+// cmd - The command
+// packet - The packet
 func (s *RTMPSession) HandleCloseStream(cmd *RTMPCommand, packet *RTMPPacket) bool {
 	streamId := createAMF0Value(AMF0_TYPE_NUMBER)
 	streamId.SetIntegerVal(int64(packet.header.stream_id))
@@ -705,17 +749,8 @@ func (s *RTMPSession) HandleCloseStream(cmd *RTMPCommand, packet *RTMPPacket) bo
 	return s.HandleDeleteStream(cmd)
 }
 
-func (s *RTMPSession) OnClose() {
-	if s.playStreamId > 0 {
-		s.DeleteStream(s.playStreamId)
-	}
-	if s.publishStreamId > 0 {
-		s.DeleteStream(s.publishStreamId)
-	}
-
-	s.isConnected = false
-}
-
+// Handles an audio packet  (contains audio data)
+// packet - The packet
 func (s *RTMPSession) HandleAudioPacket(packet *RTMPPacket) bool {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -771,6 +806,8 @@ func (s *RTMPSession) HandleAudioPacket(packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles a video packet (Contains video data)
+// packet - The packet
 func (s *RTMPSession) HandleVideoPacket(packet *RTMPPacket) bool {
 	s.publish_mutex.Lock()
 	defer s.publish_mutex.Unlock()
@@ -830,16 +867,23 @@ func (s *RTMPSession) HandleVideoPacket(packet *RTMPPacket) bool {
 	return true
 }
 
+// Handles a data packet encoded with AMF0
+// packet the packet
 func (s *RTMPSession) HandleDataPacketAMF0(packet *RTMPPacket) bool {
 	data := decodeRTMPData(packet.payload)
 	return s.HandleRTMPData(packet, &data)
 }
 
+// Handles a data packet encoded with AMF3
+// packet the packet
 func (s *RTMPSession) HandleDataPacketAMF3(packet *RTMPPacket) bool {
 	data := decodeRTMPData(packet.payload[1:])
 	return s.HandleRTMPData(packet, &data)
 }
 
+// Handles a data packet
+// packet - The packet
+// data - The decoded data message
 func (s *RTMPSession) HandleRTMPData(packet *RTMPPacket, data *RTMPData) bool {
 	LogDebugSession(s.id, s.ip, "Received data: "+data.ToString())
 	switch data.tag {
@@ -849,4 +893,16 @@ func (s *RTMPSession) HandleRTMPData(packet *RTMPPacket, data *RTMPData) bool {
 	}
 
 	return true
+}
+
+// Call after the TCP connection is closed
+func (s *RTMPSession) OnClose() {
+	if s.playStreamId > 0 {
+		s.DeleteStream(s.playStreamId)
+	}
+	if s.publishStreamId > 0 {
+		s.DeleteStream(s.publishStreamId)
+	}
+
+	s.isConnected = false
 }
