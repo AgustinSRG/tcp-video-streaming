@@ -147,8 +147,83 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 	if req.RequestURI == "/" {
 		w.WriteHeader(200)
 		fmt.Fprintf(w, "Coordinator streaming server - Version "+VERSION)
+	} else if req.RequestURI == "/ws/control/rtmp" {
+		authToken := req.Header.Get("x-control-auth-token")
+		if !ValidateAuthenticationToken(authToken, RTMP_AUTH_SUBJECT) {
+			w.WriteHeader(403)
+			fmt.Fprintf(w, "Invalid authentication token.")
+			LogRequest(sessionId, ip, "Invalid authentication token.")
+			return
+		}
+
+		conn, err := server.wsUpgrader.Upgrade(w, req, nil)
+
+		if err != nil {
+			LogDebugSession(sessionId, ip, "Error: "+err.Error())
+			return
+		}
+
+		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_RTMP)
+
+		go session.Run()
+	} else if req.RequestURI == "/ws/control/wss" {
+		authToken := req.Header.Get("x-control-auth-token")
+		if !ValidateAuthenticationToken(authToken, WSS_AUTH_SUBJECT) {
+			w.WriteHeader(403)
+			fmt.Fprintf(w, "Invalid authentication token.")
+			LogRequest(sessionId, ip, "Invalid authentication token.")
+			return
+		}
+
+		conn, err := server.wsUpgrader.Upgrade(w, req, nil)
+
+		if err != nil {
+			LogDebugSession(sessionId, ip, "Error: "+err.Error())
+			return
+		}
+
+		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_WSS)
+
+		go session.Run()
+	} else if req.RequestURI == "/ws/control/hls" {
+		authToken := req.Header.Get("x-control-auth-token")
+		if !ValidateAuthenticationToken(authToken, HLS_AUTH_SUBJECT) {
+			w.WriteHeader(403)
+			fmt.Fprintf(w, "Invalid authentication token.")
+			LogRequest(sessionId, ip, "Invalid authentication token.")
+			return
+		}
+
+		conn, err := server.wsUpgrader.Upgrade(w, req, nil)
+
+		if err != nil {
+			LogDebugSession(sessionId, ip, "Error: "+err.Error())
+			return
+		}
+
+		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_HLS)
+
+		go session.Run()
 	} else {
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Not found.")
 	}
+}
+
+// Adds a session to the list
+// s - Session
+func (server *Streaming_Coordinator_Server) AddSession(s *ControlSession) {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+
+	server.sessions[s.id] = s
+}
+
+// Removes a session from the list
+// id - Session ID
+func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+
+	delete(server.sessions, id)
 }

@@ -166,7 +166,6 @@ func (server *WS_Streaming_Server) HandleStreamingSession(sessionId uint64, w ht
 
 	if err != nil {
 		LogError(err)
-		conn.Close()
 		server.RemoveIP(ip)
 		return
 	}
