@@ -439,3 +439,28 @@ func (server *WS_Streaming_Server) RemovePlayer(channel string, key string, s *W
 		delete(server.channels, channel)
 	}
 }
+
+// Kills any sessions publishing streams
+func (server *WS_Streaming_Server) KillAllActivePublishers() {
+	activePublishers := make([]*WS_Streaming_Session, 0)
+
+	server.mutex.Lock()
+
+	for _, channel := range server.channels {
+		if channel == nil || !channel.is_publishing {
+			continue
+		}
+
+		session := server.sessions[channel.publisher]
+
+		if session != nil {
+			activePublishers = append(activePublishers, session)
+		}
+	}
+
+	server.mutex.Unlock()
+
+	for i := 0; i < len(activePublishers); i++ {
+		activePublishers[i].Kill()
+	}
+}

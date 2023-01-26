@@ -122,6 +122,10 @@ func (c *ControlServerConnection) Connect() {
 
 	c.lock.Unlock()
 
+	// After a connection is established, any previous publishing sessions must be killed,
+	// since the coordinator server thinks the streaming server went down
+	c.server.KillAllActivePublishers()
+
 	go c.RunReaderLoop(conn)
 }
 
