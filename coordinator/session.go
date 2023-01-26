@@ -24,22 +24,42 @@ type ControlSession struct {
 	id uint64 // Session ID
 	ip string // IP address of the client
 
+	externalIP   string // External IP of the streaming server
+	externalPort int    // External port of the streaming server
+	usesSSL      bool   // True if the streaming server uses SSL
+
 	mutex *sync.Mutex // Mutex to control access to the session status data
 
 	closed bool // True if the connection is closed
 
-	sessionType int
+	sessionType int // Type of control session
 }
 
+// Creates a session
+// server - Reference to the server
+// conn - Websocket connection
+// id - Session ID
+// ip - Client IP
+// sessionType - Type of control session
 func CreateSession(server *Streaming_Coordinator_Server, conn *websocket.Conn, id uint64, ip string, sessionType int) *ControlSession {
 	session := ControlSession{
-		server:      server,
-		conn:        conn,
-		id:          id,
-		ip:          ip,
-		mutex:       &sync.Mutex{},
-		closed:      false,
-		sessionType: sessionType,
+		server:       server,
+		conn:         conn,
+		id:           id,
+		ip:           ip,
+		mutex:        &sync.Mutex{},
+		closed:       false,
+		sessionType:  sessionType,
+		externalIP:   ip,
+		externalPort: 0,
+		usesSSL:      false,
+	}
+
+	switch sessionType {
+	case SESSION_TYPE_RTMP:
+		session.externalPort = 1935
+	case SESSION_TYPE_WSS:
+		session.externalPort = 80
 	}
 
 	return &session
@@ -153,6 +173,23 @@ func (session *ControlSession) Run() {
 	}
 }
 
+// Handles incoming websocket message
+// msg - The message
 func (session *ControlSession) HandleMessage(msg WebsocketMessage) {
+	switch msg.method {
+	case "ERROR":
+		session.log("ERROR / CODE=" + msg.GetParam("Error-Code") + " / MSG=" + msg.GetParam("Error-Message"))
+	case "PUBLISH-REQUEST":
+		session.HandlePublishRequest(msg.GetParam("Request-ID"), msg.GetParam("Stream-Channel"), msg.GetParam("Stream-Key"), msg.GetParam("User-IP"))
+	case "PUBLISH-END":
+		session.HandlePublishEnd(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
+	}
+}
+
+func (session *ControlSession) HandlePublishRequest(requestId string, channel string, key string, ip string) {
+
+}
+
+func (session *ControlSession) HandlePublishEnd(channel string, streamId string) {
 
 }

@@ -165,6 +165,32 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 
 		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_RTMP)
 
+		customIP := req.Header.Get("x-external-ip")
+
+		if customIP != "" {
+			if net.ParseIP(customIP) == nil {
+				session.log("Error: Not valid external IP")
+			} else {
+				session.externalIP = customIP
+			}
+		}
+
+		customPort := req.Header.Get("x-custom-port")
+
+		if customPort != "" {
+			cp, e := strconv.Atoi(customPort)
+			if e == nil {
+				session.externalPort = cp
+			} else {
+				session.log("Error: Not valid external PORT")
+			}
+		}
+
+		usesSSL := req.Header.Get("x-ssl-use")
+		if usesSSL == "true" {
+			session.usesSSL = true
+		}
+
 		go session.Run()
 	} else if req.RequestURI == "/ws/control/wss" {
 		authToken := req.Header.Get("x-control-auth-token")

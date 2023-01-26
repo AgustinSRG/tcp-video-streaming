@@ -58,6 +58,13 @@ func parseWebsocketMessage(raw string) WebsocketMessage {
 	return msg
 }
 
+// Gets a param from the message
+// paramName - Name of the param
+// Returns the param value
+func (s WebsocketMessage) GetParam(paramName string) string {
+	return s.params[strings.ToLower(paramName)]
+}
+
 // Serializes websocket message in order to send it
 func (s WebsocketMessage) serialize() string {
 	var raw string

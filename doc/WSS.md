@@ -10,7 +10,9 @@ In order to authenticate, the WebSocket stream server will provide the `x-contro
 
 If the WebSocket stream server is behind a proxy or NAT, it must set its external IP in the header `x-external-ip`. If not specified, the connection IP address is used.
 
-If the WebSocket stream server uses a different port rather than `8080`, it must specify that port in the header `x-custom-port`.
+If the WebSocket stream server uses a different port rather than `80`, it must specify that port in the header `x-custom-port`.
+
+If the WebSocket server uses SSL, set the header `x-ssl-use` to the value `true`.
 
 ## Message format
 

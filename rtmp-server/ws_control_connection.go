@@ -109,6 +109,12 @@ func (c *ControlServerConnection) Connect() {
 		headers.Set("x-custom-port", externalPort)
 	}
 
+	useSSL := os.Getenv("EXTERNAL_SSL")
+
+	if useSSL == "YES" {
+		headers.Set("x-ssl-use", "true")
+	}
+
 	conn, _, err := websocket.DefaultDialer.Dial(c.connectionURL, headers)
 
 	if err != nil {

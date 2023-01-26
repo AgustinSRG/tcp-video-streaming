@@ -71,4 +71,5 @@ Here is a list with more options you can configure:
 | CONCURRENT_LIMIT_WHITELIST    | List of IP ranges not affected by the max number of concurrent connections limit. Split by commas. Example: `127.0.0.1,10.0.0.0/8` |
 | GOP_CACHE_SIZE_MB             | Size limit in megabytes of packet cache. By default is `256`. Set it to `0` to disable cache                                       |
 | EXTERNAL_IP                   | In case the server is separated from the rest of the components via NAT or a proxy. Use this to set the external IP address        |
-| EXTERNAL_PORT                 | In case the server is separated from the rest of the components via NAT or a proxy. Use this to set the external port number       |
+| EXTERNAL_PORT                 | If the other components need to use a different port rather than `1935`, set the custom port number                                |
+| EXTERNAL_SSL                  | Set it to `YES` if the rest of components will need to use SSL to connect to the server                                            |

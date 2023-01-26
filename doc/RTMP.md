@@ -10,7 +10,9 @@ In order to authenticate, the RTMP server will provide the `x-control-auth-token
 
 If the RTMP server is behind a proxy or NAT, it must set its external IP in the header `x-external-ip`. If not specified, the connection IP address is used.
 
-If the RTMP server uses a different port rather than `8080`, it must specify that port in the header `x-custom-port`.
+If the RTMP server uses a different port rather than `1935`, it must specify that port in the header `x-custom-port`.
+
+If the RTMP server uses SSL, set the header `x-ssl-use` to the value `true`.
 
 ## Message format
 
