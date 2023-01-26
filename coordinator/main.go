@@ -12,4 +12,9 @@ func main() {
 	InitLog()
 
 	LogInfo("Started Coordinator Streaming Server  - Version " + VERSION)
+
+	server := Streaming_Coordinator_Server{}
+
+	server.Initialize()
+	server.Start()
 }
