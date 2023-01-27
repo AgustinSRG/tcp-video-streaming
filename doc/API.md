@@ -29,6 +29,12 @@ If you require authorization for your API, you can use any of the following opti
 
 The API must end the request with status code **200** if the key is valid. Any other status code will result in the publishing session to be closed.
 
+The API may return with the following headers, in order to customize the stream capabilities:
+
+ - `x-record` - Set to `true` or `false` to enable or disable stream recording.
+ - `x-previews` - Format: `{WIDTH}x{HEIGHT}, {DELAY_SECONDS}` If enabled, the encoder will save a snapshot image of the stream each `DELAY_SECONDS` seconds. Set `Previews: False` to disable it.
+ - `x-resolutions` - List of playback resolutions. Format: `{WIDTH}x{HEIGHT}-{FPS}` or `ORIGINAL`. Split by commas. The encoder will check the source resolution and will encode to at least one resolution (the closest one) and every resolution below this one.
+
 ## Event callbacks
 
 In order to process streaming events, your application must implement an API to do so.

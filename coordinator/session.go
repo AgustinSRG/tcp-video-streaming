@@ -317,6 +317,44 @@ func (session *ControlSession) SendStreamKill(channel string, streamId string) {
 	}
 }
 
+func (session *ControlSession) SendEncodeStart(channel string, streamId string, publishType int, publishSourceURL string, resolutionList ResolutionList, record bool, previewsConfig PreviewsConfiguration) {
+	params := make(map[string]string)
+
+	params["Stream-Channel"] = channel
+	params["Stream-ID"] = streamId
+
+	switch publishType {
+	case PUBLISH_METHOD_RTMP:
+		params["Stream-Source-Type"] = "RTMP"
+	case PUBLISH_METHOD_WS:
+		params["Stream-Source-Type"] = "WS"
+	}
+
+	params["Stream-Source-URI"] = publishSourceURL
+
+	params["Resolutions"] = resolutionList.Encode()
+
+	if record {
+		params["Record"] = "True"
+	} else {
+		params["Record"] = "False"
+	}
+
+	params["Previews"] = previewsConfig.Encode()
+
+	msg := WebsocketMessage{
+		method: "ENCODE-START",
+		params: params,
+		body:   "",
+	}
+
+	err := session.Send(msg)
+
+	if err != nil {
+		LogError(err)
+	}
+}
+
 func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
 	params := make(map[string]string)
 
