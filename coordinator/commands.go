@@ -32,4 +32,18 @@ func (server *Streaming_Coordinator_Server) RunStreamCloseCommand(w http.Respons
 // channel - Channel ID
 // streamId - Stream ID
 func (server *Streaming_Coordinator_Server) KillStream(channel string, streamId string) {
+	channelData := server.coordinator.AcquireChannel(channel)
+
+	if channelData.closed {
+		server.coordinator.ReleaseChannel(channelData)
+		return
+	}
+
+	publishSession := server.GetSession(channelData.publisher)
+
+	server.coordinator.ReleaseChannel(channelData)
+
+	if publishSession != nil {
+		publishSession.SendStreamKill(channel, streamId)
+	}
 }
