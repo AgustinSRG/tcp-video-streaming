@@ -27,7 +27,7 @@ If you require authorization for your API, you can use any of the following opti
  - `Bearer` - Bearer token authentication. Set `KEY_VERIFICATION_AUTH_TOKEN` environment variable.
  - `Custom` - Custom authentication header. Set `KEY_VERIFICATION_AUTH_CUSTOM` environment variable.
 
-The API must end the request with status code **200** if the key is invalid. Any other status code will result in the publishing session to be closed.
+The API must end the request with status code **200** if the key is valid. Any other status code will result in the publishing session to be closed.
 
 ## Event callbacks
 
