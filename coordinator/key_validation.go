@@ -13,13 +13,17 @@ import (
 // channel - The channel
 // key - The stream key
 // userIP - IP of the publisher
-// Returns true only if the key is valid
-func ValidateStreamKey(channel string, key string, userIP string) bool {
+// Returns:
+//   valid - True only if the key is valid
+//   resolutionList - List of allowed resolutions
+//   record - True if recording is enabled
+//   previewsConfig - Previews configuration
+func ValidateStreamKey(channel string, key string, userIP string) (valid bool, resolutionList ResolutionList, record bool, previewsConfig PreviewsConfiguration) {
 	verificationURL := os.Getenv("KEY_VERIFICATION_URL")
 
 	if verificationURL == "" {
 		LogWarning("Key was considered valid by default, since KEY_VERIFICATION_URL is missing")
-		return true
+		return true, ResolutionList{hasOriginal: true, resolutions: make([]Resolution, 0)}, false, PreviewsConfiguration{enabled: false}
 	}
 
 	authorization := ""
@@ -44,7 +48,7 @@ func ValidateStreamKey(channel string, key string, userIP string) bool {
 
 	if e != nil {
 		LogError(e)
-		return false
+		return false, ResolutionList{}, false, PreviewsConfiguration{}
 	}
 
 	req.Header.Set("x-streaming-channel", channel)
@@ -61,8 +65,12 @@ func ValidateStreamKey(channel string, key string, userIP string) bool {
 
 	if e != nil {
 		LogError(e)
-		return false
+		return false, ResolutionList{}, false, PreviewsConfiguration{}
 	}
 
-	return res.StatusCode == 200
+	if res.StatusCode == 200 {
+		return true, DecodeResolutionsList(res.Header.Get("x-resolutions")), strings.ToLower(res.Header.Get("x-record")) == "true", DecodePreviewsConfiguration(res.Header.Get("x-previews"))
+	} else {
+		return false, ResolutionList{}, false, PreviewsConfiguration{}
+	}
 }

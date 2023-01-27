@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,6 +34,8 @@ type ControlSession struct {
 	closed bool // True if the connection is closed
 
 	sessionType int // Type of control session
+
+	associatedChannels map[string]bool // List of associated channels
 }
 
 // Creates a session
@@ -43,16 +46,17 @@ type ControlSession struct {
 // sessionType - Type of control session
 func CreateSession(server *Streaming_Coordinator_Server, conn *websocket.Conn, id uint64, ip string, sessionType int) *ControlSession {
 	session := ControlSession{
-		server:       server,
-		conn:         conn,
-		id:           id,
-		ip:           ip,
-		mutex:        &sync.Mutex{},
-		closed:       false,
-		sessionType:  sessionType,
-		externalIP:   ip,
-		externalPort: 0,
-		usesSSL:      false,
+		server:             server,
+		conn:               conn,
+		id:                 id,
+		ip:                 ip,
+		mutex:              &sync.Mutex{},
+		closed:             false,
+		sessionType:        sessionType,
+		externalIP:         ip,
+		externalPort:       0,
+		usesSSL:            false,
+		associatedChannels: make(map[string]bool),
 	}
 
 	switch sessionType {
@@ -197,7 +201,8 @@ func (session *ControlSession) HandlePublishRequest(requestId string, channel st
 		return
 	}
 
-	if !ValidateStreamKey(channel, key, ip) {
+	keyValid, resolutionList, record, previewsConfig := ValidateStreamKey(channel, key, ip)
+	if !keyValid {
 		session.SendPublishDeny(requestId, channel)
 		return
 	}
@@ -229,13 +234,44 @@ func (session *ControlSession) HandlePublishRequest(requestId string, channel st
 		return
 	}
 
-	// Find an encoder and assign it (TODO)
+	// Find an encoder and assign it
+	encoderServer := session.server.AssignAvailableEncoder()
+	if encoderServer == nil {
+		channelData.closed = true
+		session.server.coordinator.ReleaseChannel(channelData)
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
+
+	encoderServer.AssociateChannel(channel)
+	channelData.encoder = encoderServer.id
+
+	encoderServer.SendEncodeStart(channel, streamId, channelData.publishMethod, session.GeneratePublishSourceURL(channel, key), resolutionList, record, previewsConfig)
 
 	// Release channel data
 	session.server.coordinator.ReleaseChannel(channelData)
 
 	// Accepted
 	session.SendPublishAccept(requestId, channel, streamId)
+}
+
+func (session *ControlSession) GeneratePublishSourceURL(channel string, key string) string {
+	switch session.sessionType {
+	case SESSION_TYPE_RTMP:
+		if session.usesSSL {
+			return "rtmps://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+		} else {
+			return "rtmp://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+		}
+	case SESSION_TYPE_WSS:
+		if session.usesSSL {
+			return "wss://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+		} else {
+			return "ws://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+		}
+	default:
+		return ""
+	}
 }
 
 func (session *ControlSession) HandlePublishEnd(channel string, streamId string) {
@@ -372,4 +408,31 @@ func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
 	if err != nil {
 		LogError(err)
 	}
+}
+
+func (session *ControlSession) AssociateChannel(channel string) {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+
+	session.associatedChannels[channel] = true
+}
+
+func (session *ControlSession) DisassociateChannel(channel string) {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+
+	delete(session.associatedChannels, channel)
+}
+
+func (session *ControlSession) GetAssociatedChannels() []string {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+
+	result := make([]string, 0)
+
+	for channel := range session.associatedChannels {
+		result = append(result, channel)
+	}
+
+	return result
 }
