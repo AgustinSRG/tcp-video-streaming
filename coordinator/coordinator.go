@@ -3,9 +3,12 @@
 package main
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"io/ioutil"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Stores the streaming coordination data
@@ -169,4 +172,100 @@ func (coord *Streaming_Coordinator) SavePastActiveStreams() {
 	if err != nil {
 		LogError(err)
 	}
+}
+
+// Acquires the access to a streaming channel data struct
+// Only a single thread can access
+// channelId - Id of the channel
+// Returns a ref to the streaming channel
+// Must call ReleaseChannel after the thread is done with the struct
+func (coord *Streaming_Coordinator) AcquireChannel(channelId string) *StreamingChannel {
+	coord.mutex.Lock()
+
+	channel := coord.channels[channelId]
+
+	if channel == nil {
+		channel = &StreamingChannel{
+			id:            channelId,
+			usageCount:    0,
+			mutex:         &sync.Mutex{},
+			streamId:      "",
+			publishMethod: 0,
+			publisher:     0,
+			encoder:       0,
+			nextEventId:   0,
+			pendingEvents: make(map[uint64]*PendingStreamAvailableEvent),
+			closed:        true,
+		}
+
+		coord.channels[channelId] = channel
+	}
+
+	channel.usageCount++
+
+	coord.mutex.Unlock()
+
+	channel.mutex.Lock()
+
+	return channel
+}
+
+// Releases a stream channel data struct
+// channel - Channel data struct
+func (coord *Streaming_Coordinator) ReleaseChannel(channel *StreamingChannel) {
+	channel.usageCount--
+
+	mustDelete := (channel.usageCount <= 0 && channel.closed)
+
+	channel.mutex.Unlock()
+
+	if mustDelete {
+		coord.mutex.Lock()
+
+		// No threads wanting it, and it's closed
+
+		delete(coord.channels, channel.id)
+
+		coord.mutex.Unlock()
+	}
+}
+
+// Generates an unique stream ID
+func (coord *Streaming_Coordinator) GenerateStreamID() string {
+	idBytes := make([]byte, 16)
+
+	binary.LittleEndian.PutUint64(idBytes[0:8], uint64(time.Now().UnixMilli()))
+
+	coord.mutex.Lock()
+
+	coord.nextStreamId++
+
+	binary.LittleEndian.PutUint64(idBytes[9:16], coord.nextStreamId)
+
+	coord.mutex.Unlock()
+
+	return strings.ToLower(hex.EncodeToString(idBytes))
+}
+
+// Registers encoder server
+// id - Server ID
+// capacity - Server capacity
+func (coord *Streaming_Coordinator) RegisterEncoder(id uint64, capacity int) {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	coord.hlsEncoders[id] = &HLS_Encoder_Server{
+		id:       id,
+		capacity: capacity,
+		load:     0,
+	}
+}
+
+// Deregister encoder server
+// id - Server ID
+func (coord *Streaming_Coordinator) DeregisterEncoder(id uint64) {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	delete(coord.hlsEncoders, id)
 }

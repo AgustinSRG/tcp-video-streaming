@@ -187,9 +187,151 @@ func (session *ControlSession) HandleMessage(msg WebsocketMessage) {
 }
 
 func (session *ControlSession) HandlePublishRequest(requestId string, channel string, key string, ip string) {
+	if !validateStreamIDString(channel) {
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
 
+	if !validateStreamIDString(key) {
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
+
+	if !ValidateStreamKey(channel, key, ip) {
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
+
+	streamId := session.server.coordinator.GenerateStreamID()
+
+	// Change coordinator status data
+
+	channelData := session.server.coordinator.AcquireChannel(channel)
+
+	if !channelData.closed {
+		// Already publishing
+		session.server.coordinator.ReleaseChannel(channelData)
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
+
+	channelData.closed = false
+	channelData.publisher = session.id
+	switch session.sessionType {
+	case SESSION_TYPE_RTMP:
+		channelData.publishMethod = PUBLISH_METHOD_RTMP
+	case SESSION_TYPE_WSS:
+		channelData.publishMethod = PUBLISH_METHOD_WS
+	default:
+		channelData.closed = true
+		session.server.coordinator.ReleaseChannel(channelData)
+		session.SendPublishDeny(requestId, channel)
+		return
+	}
+
+	// Find an encoder and assign it (TODO)
+
+	// Release channel data
+	session.server.coordinator.ReleaseChannel(channelData)
+
+	// Accepted
+	session.SendPublishAccept(requestId, channel, streamId)
 }
 
 func (session *ControlSession) HandlePublishEnd(channel string, streamId string) {
+	channelData := session.server.coordinator.AcquireChannel(channel)
 
+	if channelData.closed {
+		session.server.coordinator.ReleaseChannel(channelData)
+		return
+	}
+
+	channelData.closed = true
+
+	// Find encoder and notice it
+	encoderId := channelData.encoder
+	encoderSession := session.server.GetSession(encoderId)
+
+	if encoderSession != nil {
+		encoderSession.SendEncodeStop(channel, streamId)
+	}
+
+	session.server.coordinator.ReleaseChannel(channelData)
+}
+
+func (session *ControlSession) SendPublishDeny(requestId string, channel string) {
+	params := make(map[string]string)
+
+	params["Request-ID"] = requestId
+	params["Stream-Channel"] = channel
+
+	msg := WebsocketMessage{
+		method: "PUBLISH-DENY",
+		params: params,
+		body:   "",
+	}
+
+	err := session.Send(msg)
+
+	if err != nil {
+		LogError(err)
+	}
+}
+
+func (session *ControlSession) SendPublishAccept(requestId string, channel string, streamId string) {
+	params := make(map[string]string)
+
+	params["Request-ID"] = requestId
+	params["Stream-Channel"] = channel
+	params["Stream-ID"] = streamId
+
+	msg := WebsocketMessage{
+		method: "PUBLISH-ACCEPT",
+		params: params,
+		body:   "",
+	}
+
+	err := session.Send(msg)
+
+	if err != nil {
+		LogError(err)
+	}
+}
+
+func (session *ControlSession) SendStreamKill(channel string, streamId string) {
+	params := make(map[string]string)
+
+	params["Stream-Channel"] = channel
+	params["Stream-ID"] = streamId
+
+	msg := WebsocketMessage{
+		method: "STREAM-KILL",
+		params: params,
+		body:   "",
+	}
+
+	err := session.Send(msg)
+
+	if err != nil {
+		LogError(err)
+	}
+}
+
+func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
+	params := make(map[string]string)
+
+	params["Stream-Channel"] = channel
+	params["Stream-ID"] = streamId
+
+	msg := WebsocketMessage{
+		method: "ENCODE-STOP",
+		params: params,
+		body:   "",
+	}
+
+	err := session.Send(msg)
+
+	if err != nil {
+		LogError(err)
+	}
 }

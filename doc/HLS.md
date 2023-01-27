@@ -82,7 +82,7 @@ The required arguments are:
  - `Stream-ID` - Unique identifier of the video stream session
  - `Stream-Source-Type` - Type of source to encode. Can be `RTMP` or `WS`.
  - `Stream-Source-URI` - Source URL to fetch the video stream
- - `Resolutions` - List of playback resolutions. Format: `{WIDTH}x{HEIGHT}-{FPS}`. Split by commas. The encoder will check the source resolution and will encode to at least one resolution (the closest one) and every resolution below this one.
+ - `Resolutions` - List of playback resolutions. Format: `{WIDTH}x{HEIGHT}-{FPS}` or `ORIGINAL`. Split by commas. The encoder will check the source resolution and will encode to at least one resolution (the closest one) and every resolution below this one.
  - `Record` - You can set it to `True` or `False`. Enabling it means the encoder will keep all the HLS fragments, and a separate VOD playlist.
  - `Previews` - Format: `{WIDTH}x{HEIGHT}, {DELAY_SECONDS}` If enabled, the encoder will save a snapshot image of the stream each `DELAY_SECONDS` seconds. Set `Previews: False` to disable it.
 

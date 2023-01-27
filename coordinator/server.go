@@ -255,3 +255,13 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 
 	delete(server.sessions, id)
 }
+
+// Gets a session from the list
+// id - Session ID
+// Returns a ref to the session
+func (server *Streaming_Coordinator_Server) GetSession(id uint64) *ControlSession {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+
+	return server.sessions[id]
+}
