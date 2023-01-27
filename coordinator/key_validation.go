@@ -28,14 +28,14 @@ func ValidateStreamKey(channel string, key string, userIP string) bool {
 
 	switch authMethod {
 	case "BASIC":
-		user := os.Getenv("EVENT_CALLBACK_AUTH_USER")
-		password := os.Getenv("EVENT_CALLBACK_PASSWORD")
+		user := os.Getenv("KEY_VERIFICATION_AUTH_USER")
+		password := os.Getenv("KEY_VERIFICATION_PASSWORD")
 		authorization = "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
 	case "BEARER":
-		token := os.Getenv("EVENT_CALLBACK_AUTH_TOKEN")
+		token := os.Getenv("KEY_VERIFICATION_AUTH_TOKEN")
 		authorization = "Bearer " + token
 	case "CUSTOM":
-		authorization = os.Getenv("EVENT_CALLBACK_AUTH_CUSTOM")
+		authorization = os.Getenv("KEY_VERIFICATION_AUTH_CUSTOM")
 	}
 
 	client := &http.Client{}
