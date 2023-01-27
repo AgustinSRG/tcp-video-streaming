@@ -230,6 +230,8 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_HLS)
 
 		go session.Run()
+	} else if req.Method == "POST" && req.RequestURI == "/commands/close" {
+		server.RunStreamCloseCommand(w, req)
 	} else {
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Not found.")
