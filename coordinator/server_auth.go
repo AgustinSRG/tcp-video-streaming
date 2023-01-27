@@ -15,6 +15,10 @@ const (
 	HLS_AUTH_SUBJECT  = "hls-control"
 )
 
+// Validates authentication token
+// token - Auth token to validate
+// requiredSubject - Subject required by the token
+// Returns true only if valid
 func ValidateAuthenticationToken(token string, requiredSubject string) bool {
 	secret := os.Getenv("CONTROL_SECRET")
 
