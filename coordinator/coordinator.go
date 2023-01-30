@@ -269,3 +269,46 @@ func (coord *Streaming_Coordinator) DeregisterEncoder(id uint64) {
 
 	delete(coord.hlsEncoders, id)
 }
+
+// Removes streaming server
+// sessionType - Type of server
+// id - Server ID
+// ip - Server IP
+// port - Server port
+// ssl - True if the server uses SSL
+func (coord *Streaming_Coordinator) RegisterStreamingServer(sessionType int, id uint64, ip string, port int, ssl bool) {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	switch sessionType {
+	case SESSION_TYPE_RTMP:
+		coord.rtmpServers[id] = &Streaming_RTMP_Server{
+			id:   id,
+			ip:   ip,
+			port: port,
+			ssl:  ssl,
+		}
+	case SESSION_TYPE_WSS:
+		coord.wssServers[id] = &Streaming_WSS_Server{
+			id:   id,
+			ip:   ip,
+			port: port,
+			ssl:  ssl,
+		}
+	}
+}
+
+// Removes streaming server
+// sessionType - Type of server
+// id - Server ID
+func (coord *Streaming_Coordinator) DeregisterStreamingServer(sessionType int, id uint64) {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	switch sessionType {
+	case SESSION_TYPE_RTMP:
+		delete(coord.rtmpServers, id)
+	case SESSION_TYPE_WSS:
+		delete(coord.wssServers, id)
+	}
+}

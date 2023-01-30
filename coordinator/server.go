@@ -191,6 +191,9 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 			session.usesSSL = true
 		}
 
+		session.server.AddSession(session)
+		session.server.coordinator.RegisterStreamingServer(SESSION_TYPE_RTMP, sessionId, session.externalIP, session.externalPort, session.usesSSL)
+
 		go session.Run()
 	} else if req.RequestURI == "/ws/control/wss" {
 		authToken := req.Header.Get("x-control-auth-token")
@@ -210,6 +213,35 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 
 		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_WSS)
 
+		customIP := req.Header.Get("x-external-ip")
+
+		if customIP != "" {
+			if net.ParseIP(customIP) == nil {
+				session.log("Error: Not valid external IP")
+			} else {
+				session.externalIP = customIP
+			}
+		}
+
+		customPort := req.Header.Get("x-custom-port")
+
+		if customPort != "" {
+			cp, e := strconv.Atoi(customPort)
+			if e == nil {
+				session.externalPort = cp
+			} else {
+				session.log("Error: Not valid external PORT")
+			}
+		}
+
+		usesSSL := req.Header.Get("x-ssl-use")
+		if usesSSL == "true" {
+			session.usesSSL = true
+		}
+
+		session.server.AddSession(session)
+		session.server.coordinator.RegisterStreamingServer(SESSION_TYPE_WSS, sessionId, session.externalIP, session.externalPort, session.usesSSL)
+
 		go session.Run()
 	} else if req.RequestURI == "/ws/control/hls" {
 		authToken := req.Header.Get("x-control-auth-token")
@@ -228,6 +260,8 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 		}
 
 		session := CreateSession(server, conn, sessionId, ip, SESSION_TYPE_HLS)
+
+		session.server.AddSession(session)
 
 		go session.Run()
 	} else if req.Method == "POST" && req.RequestURI == "/commands/close" {
@@ -252,6 +286,56 @@ func (server *Streaming_Coordinator_Server) AddSession(s *ControlSession) {
 func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
+
+	session := server.sessions[id]
+
+	if session != nil {
+		switch session.sessionType {
+		case SESSION_TYPE_RTMP, SESSION_TYPE_WSS:
+			server.coordinator.DeregisterStreamingServer(session.sessionType, id)
+
+			associatedChannels := session.GetAssociatedChannels()
+
+			for i := 0; i < len(associatedChannels); i++ {
+				channelData := session.server.coordinator.AcquireChannel(associatedChannels[i])
+
+				if !channelData.closed && channelData.publisher == session.id {
+					channelData.closed = true
+
+					// Find encoder and notice it
+					encoderId := channelData.encoder
+					encoderSession := session.server.GetSession(encoderId)
+
+					if encoderSession != nil {
+						encoderSession.SendEncodeStop(channelData.id, channelData.streamId)
+						encoderSession.DisassociateChannel(channelData.id)
+					}
+				}
+
+				session.server.coordinator.ReleaseChannel(channelData)
+			}
+		case SESSION_TYPE_HLS:
+			server.coordinator.DeregisterEncoder(id)
+
+			associatedChannels := session.GetAssociatedChannels()
+
+			for i := 0; i < len(associatedChannels); i++ {
+				channelData := session.server.coordinator.AcquireChannel(associatedChannels[i])
+
+				if !channelData.closed && channelData.encoder == session.id {
+					// Find publisher and kill the stream
+					publisherId := channelData.publisher
+					pubSession := session.server.GetSession(publisherId)
+
+					if pubSession != nil {
+						pubSession.SendStreamKill(channelData.id, channelData.streamId)
+					}
+				}
+
+				session.server.coordinator.ReleaseChannel(channelData)
+			}
+		}
+	}
 
 	delete(server.sessions, id)
 }

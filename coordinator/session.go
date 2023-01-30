@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -36,6 +37,8 @@ type ControlSession struct {
 	sessionType int // Type of control session
 
 	associatedChannels map[string]bool // List of associated channels
+
+	encoderRegistered bool // True if the encoder was registered
 }
 
 // Creates a session
@@ -57,6 +60,7 @@ func CreateSession(server *Streaming_Coordinator_Server, conn *websocket.Conn, i
 		externalPort:       0,
 		usesSSL:            false,
 		associatedChannels: make(map[string]bool),
+		encoderRegistered:  false,
 	}
 
 	switch sessionType {
@@ -187,10 +191,23 @@ func (session *ControlSession) HandleMessage(msg WebsocketMessage) {
 		session.HandlePublishRequest(msg.GetParam("Request-ID"), msg.GetParam("Stream-Channel"), msg.GetParam("Stream-Key"), msg.GetParam("User-IP"))
 	case "PUBLISH-END":
 		session.HandlePublishEnd(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
+	case "REGISTER":
+		capacity, err := strconv.ParseInt(msg.GetParam("Capacity"), 10, 32)
+
+		if err != nil {
+			LogError(err)
+			return
+		}
+
+		session.HandleEncoderRegister(int(capacity))
 	}
 }
 
 func (session *ControlSession) HandlePublishRequest(requestId string, channel string, key string, ip string) {
+	if session.sessionType != SESSION_TYPE_RTMP && session.sessionType != SESSION_TYPE_WSS {
+		return
+	}
+
 	if !validateStreamIDString(channel) {
 		session.SendPublishDeny(requestId, channel)
 		return
@@ -233,6 +250,7 @@ func (session *ControlSession) HandlePublishRequest(requestId string, channel st
 		session.SendPublishDeny(requestId, channel)
 		return
 	}
+	session.AssociateChannel(channel)
 
 	// Find an encoder and assign it
 	encoderServer := session.server.AssignAvailableEncoder()
@@ -275,6 +293,10 @@ func (session *ControlSession) GeneratePublishSourceURL(channel string, key stri
 }
 
 func (session *ControlSession) HandlePublishEnd(channel string, streamId string) {
+	if session.sessionType != SESSION_TYPE_RTMP && session.sessionType != SESSION_TYPE_WSS {
+		return
+	}
+
 	channelData := session.server.coordinator.AcquireChannel(channel)
 
 	if channelData.closed {
@@ -284,15 +306,31 @@ func (session *ControlSession) HandlePublishEnd(channel string, streamId string)
 
 	channelData.closed = true
 
+	// Disassociate the channel from the session
+	session.DisassociateChannel(channel)
+
 	// Find encoder and notice it
 	encoderId := channelData.encoder
 	encoderSession := session.server.GetSession(encoderId)
 
 	if encoderSession != nil {
 		encoderSession.SendEncodeStop(channel, streamId)
+		encoderSession.DisassociateChannel(channel)
 	}
 
 	session.server.coordinator.ReleaseChannel(channelData)
+}
+
+func (session *ControlSession) HandleEncoderRegister(capacity int) {
+	if session.sessionType != SESSION_TYPE_HLS {
+		return
+	}
+
+	session.server.coordinator.RegisterEncoder(session.id, capacity)
+
+	session.log("REGISTERED ENCODER / CAPACITY: " + fmt.Sprint(capacity))
+
+	session.encoderRegistered = true
 }
 
 func (session *ControlSession) SendPublishDeny(requestId string, channel string) {
