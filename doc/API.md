@@ -68,6 +68,30 @@ For the API to require authorization, set the method in the `COMMANDS_API_AUTH`:
  - `Basic` - Basic HTTP authorization. Set `COMMANDS_API_AUTH_USER` and `COMMANDS_API_AUTH_PASSWORD` environment variables.
  - `Bearer` - Bearer token authentication. Set `COMMANDS_API_AUTH_TOKEN` environment variable.
 
+### Capacity
+
+Use this command to get information about the current load and capacity of the encoders.
+
+Send a **GET** request to `http(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/commands/capacity`
+
+The API will end with the **200** status code if succeeded. It will fail with the status code **401** if the authorization is not valid.
+
+The body of the request will be a **JSON** with the following properties:
+
+ - `load` - Current load (number of active streams)
+ - `capacity` - Current capacity (-1 means infinite)
+ - `encoderCount` - Current number of HLS encoders
+
+Example:
+
+```json
+{
+    "load": 1,
+    "capacity": 8,
+    "encoderCount": 2
+}
+```
+
 ### Close stream
 
 In order to force-close streaming session, the application must send **POST** requests to `http(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/commands/close`, with an **empty body** and the following headers:

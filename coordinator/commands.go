@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -14,7 +15,7 @@ func (server *Streaming_Coordinator_Server) RunStreamCloseCommand(w http.Respons
 	authentication := req.Header.Get("Authorization")
 
 	if !CheckCommandAuthentication(authentication) {
-		w.WriteHeader(403)
+		w.WriteHeader(401)
 		fmt.Fprintf(w, "Invalid authorization header.")
 		return
 	}
@@ -45,5 +46,72 @@ func (server *Streaming_Coordinator_Server) KillStream(channel string, streamId 
 
 	if publishSession != nil {
 		publishSession.SendStreamKill(channel, streamId)
+	}
+}
+
+// Response for the capacity API
+type CapacityAPIResponse struct {
+	Load         int `json:"load"`
+	Capacity     int `json:"capacity"`
+	EncoderCount int `json:"encoderCount"`
+}
+
+// Runs capacity get command
+// w - Writer to send the response
+// req - Client request
+func (server *Streaming_Coordinator_Server) RunGetCapacityCommand(w http.ResponseWriter, req *http.Request) {
+	authentication := req.Header.Get("Authorization")
+
+	if !CheckCommandAuthentication(authentication) {
+		w.WriteHeader(401)
+		fmt.Fprintf(w, "Invalid authorization header.")
+		return
+	}
+
+	w.Header().Add("Cache-Control", "no-cache")
+
+	capacity := server.coordinator.GetCapacity()
+
+	json, err := json.Marshal(capacity)
+
+	if err != nil {
+		LogError(err)
+		w.WriteHeader(500)
+		fmt.Fprintf(w, "ERROR: "+err.Error())
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, string(json))
+}
+
+// Computes current capacity and returns the information
+func (coord *Streaming_Coordinator) GetCapacity() CapacityAPIResponse {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	totalCapacity := 0
+	totalLoad := 0
+	encoderCount := 0
+
+	for _, encoder := range coord.hlsEncoders {
+		encoderCount++
+
+		totalLoad += encoder.load
+
+		if totalCapacity >= 0 {
+			if encoder.capacity < 0 {
+				totalCapacity = -1
+			} else {
+				totalCapacity += encoder.capacity
+			}
+		}
+	}
+
+	return CapacityAPIResponse{
+		Capacity:     totalCapacity,
+		Load:         totalLoad,
+		EncoderCount: encoderCount,
 	}
 }
