@@ -327,9 +327,10 @@ func (coord *Streaming_Coordinator) AddActiveStream(channel string, streamId str
 	coord.mutex.Lock()
 	defer coord.mutex.Unlock()
 
-	coord.activeStreams[id] = true
-
-	coord.SavePastActiveStreams()
+	if !coord.activeStreams[id] {
+		coord.activeStreams[id] = true
+		coord.SavePastActiveStreams()
+	}
 }
 
 // Call when an active stream is closed (HLS encoder process ends)

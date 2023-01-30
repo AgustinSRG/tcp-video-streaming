@@ -29,6 +29,33 @@ func (session *ControlSession) HandleStreamAvailable(channel string, streamId st
 		return
 	}
 
+	// Register active stream
+
+	session.server.coordinator.AddActiveStream(channel, streamId)
+
+	// Send event to application
+
+	channelData := session.server.coordinator.AcquireChannel(channel)
+	defer session.server.coordinator.ReleaseChannel(channelData)
+
+	channelData.nextEventId++
+
+	eventId := channelData.nextEventId
+
+	event := &PendingStreamAvailableEvent{
+		id:         eventId,
+		channel:    channel,
+		streamId:   streamId,
+		streamType: streamType,
+		resolution: resolution,
+		indexFile:  indexFile,
+		cancelled:  false,
+	}
+
+	channelData.pendingEvents[channelData.nextEventId] = event
+
+	go SendStreamAvailableEvent(channelData, event)
+
 	session.log("STREAM-AVAILABLE: " + channel + "/" + streamId + " | TYPE=" + streamType + " | RESOLUTION=" + resolution + " | INDEX=" + indexFile)
 }
 
@@ -53,6 +80,11 @@ func (session *ControlSession) HandleStreamClosed(channel string, streamId strin
 		if pubSession != nil {
 			pubSession.SendStreamKill(channelData.id, channelData.streamId)
 		}
+	}
+
+	// Cancel any stream-available events
+	for _, event := range channelData.pendingEvents {
+		event.cancelled = true
 	}
 
 	session.log("STREAM-CLOSED: " + channel + "/" + streamId)

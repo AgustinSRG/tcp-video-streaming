@@ -335,6 +335,11 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 					}
 				}
 
+				// Cancel any stream-available events
+				for _, event := range channelData.pendingEvents {
+					event.cancelled = true
+				}
+
 				session.server.coordinator.ReleaseChannel(channelData)
 			}
 		}

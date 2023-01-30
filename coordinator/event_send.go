@@ -85,7 +85,11 @@ func SendStreamAvailableEvent(channel *StreamingChannel, event *PendingStreamAva
 		}
 	}
 
-	// TODO: Call channel method to indicate the event being sent
+	// Remove event from the list
+
+	channel.mutex.Lock()
+	delete(channel.pendingEvents, event.id)
+	channel.mutex.Unlock()
 }
 
 // Sends an stream-closed event
