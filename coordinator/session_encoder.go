@@ -29,6 +29,7 @@ func (session *ControlSession) HandleStreamAvailable(channel string, streamId st
 		return
 	}
 
+	session.log("STREAM-AVAILABLE: " + channel + "/" + streamId + " | TYPE=" + streamType + " | RESOLUTION=" + resolution + " | INDEX=" + indexFile)
 }
 
 // Handles STREAM-CLOSED message
@@ -38,6 +39,23 @@ func (session *ControlSession) HandleStreamClosed(channel string, streamId strin
 	if session.sessionType != SESSION_TYPE_HLS {
 		return
 	}
+
+	session.server.coordinator.OnActiveStreamClosed(channel, streamId)
+
+	channelData := session.server.coordinator.AcquireChannel(channel)
+	defer session.server.coordinator.ReleaseChannel(channelData)
+
+	if !channelData.closed && channelData.encoder == session.id {
+		// Find publisher and kill the stream session
+		publisherId := channelData.publisher
+		pubSession := session.server.GetSession(publisherId)
+
+		if pubSession != nil {
+			pubSession.SendStreamKill(channelData.id, channelData.streamId)
+		}
+	}
+
+	session.log("STREAM-CLOSED: " + channel + "/" + streamId)
 }
 
 // Sends ENCODE-START message

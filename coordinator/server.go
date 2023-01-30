@@ -322,6 +322,9 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 			for i := 0; i < len(associatedChannels); i++ {
 				channelData := session.server.coordinator.AcquireChannel(associatedChannels[i])
 
+				// Close active stream
+				session.server.coordinator.OnActiveStreamClosed(channelData.id, channelData.streamId)
+
 				if !channelData.closed && channelData.encoder == session.id {
 					// Find publisher and kill the stream
 					publisherId := channelData.publisher

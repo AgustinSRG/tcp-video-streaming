@@ -155,5 +155,6 @@ func SendStreamClosedEvent(coordinator *Streaming_Coordinator, event *PendingStr
 		}
 	}
 
-	// TODO: Call coordinator method to indicate the event being sent
+	// Call coordinator method to indicate the event being sent
+	coordinator.RemoveActiveStream(event.channel, event.streamId)
 }

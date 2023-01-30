@@ -129,6 +129,9 @@ const ACTIVE_STREAMS_TMP_FILE = "active_streams.tmp"
 
 // Loads the list of active streams from a file
 func (coord *Streaming_Coordinator) LoadPastActiveStreams() {
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
 	content, err := ioutil.ReadFile(ACTIVE_STREAMS_TMP_FILE)
 
 	if err != nil {
@@ -149,14 +152,16 @@ func (coord *Streaming_Coordinator) LoadPastActiveStreams() {
 
 		coord.activeStreams[channel+":"+streamId] = true
 
-		coord.pendingStreamClosedEvents[streamId] = &PendingStreamClosedEvent{
+		event := &PendingStreamClosedEvent{
 			channel:   channel,
 			streamId:  streamId,
 			cancelled: false,
 		}
-	}
 
-	// TODO: Start event senders
+		coord.pendingStreamClosedEvents[streamId] = event
+
+		go SendStreamClosedEvent(coord, event)
+	}
 }
 
 // Saves the current list of active streams to a file
@@ -311,4 +316,54 @@ func (coord *Streaming_Coordinator) DeregisterStreamingServer(sessionType int, i
 	case SESSION_TYPE_WSS:
 		delete(coord.wssServers, id)
 	}
+}
+
+// Adds active stream to the list
+// channel - The channel
+// streamId - Stream ID
+func (coord *Streaming_Coordinator) AddActiveStream(channel string, streamId string) {
+	id := channel + ":" + streamId
+
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	coord.activeStreams[id] = true
+
+	coord.SavePastActiveStreams()
+}
+
+// Call when an active stream is closed (HLS encoder process ends)
+// channel - The channel
+// streamId - Stream ID
+func (coord *Streaming_Coordinator) OnActiveStreamClosed(channel string, streamId string) {
+	id := channel + ":" + streamId
+
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	if coord.activeStreams[id] && coord.pendingStreamClosedEvents[streamId] == nil {
+		event := &PendingStreamClosedEvent{
+			channel:   channel,
+			streamId:  streamId,
+			cancelled: false,
+		}
+
+		coord.pendingStreamClosedEvents[streamId] = event
+
+		go SendStreamClosedEvent(coord, event)
+	}
+}
+
+// Removes an active stream from the list
+// channel - The channel
+// streamId - Stream ID
+func (coord *Streaming_Coordinator) RemoveActiveStream(channel string, streamId string) {
+	id := channel + ":" + streamId
+
+	coord.mutex.Lock()
+	defer coord.mutex.Unlock()
+
+	delete(coord.activeStreams, id)
+
+	coord.SavePastActiveStreams()
 }
