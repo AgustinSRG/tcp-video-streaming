@@ -200,79 +200,17 @@ func (session *ControlSession) HandleMessage(msg WebsocketMessage) {
 		}
 
 		session.HandleEncoderRegister(int(capacity))
+	case "STREAM-AVAILABLE":
+		session.HandleStreamAvailable(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Type"), msg.GetParam("Resolution"), msg.GetParam("Index-file"))
+	case "STREAM-CLOSED":
+		session.HandleStreamClosed(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
 	}
 }
 
-func (session *ControlSession) HandlePublishRequest(requestId string, channel string, key string, ip string) {
-	if session.sessionType != SESSION_TYPE_RTMP && session.sessionType != SESSION_TYPE_WSS {
-		return
-	}
-
-	if !validateStreamIDString(channel) {
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-
-	if !validateStreamIDString(key) {
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-
-	keyValid, resolutionList, record, previewsConfig := ValidateStreamKey(channel, key, ip)
-	if !keyValid {
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-
-	streamId := session.server.coordinator.GenerateStreamID()
-
-	// Change coordinator status data
-
-	channelData := session.server.coordinator.AcquireChannel(channel)
-
-	if !channelData.closed {
-		// Already publishing
-		session.server.coordinator.ReleaseChannel(channelData)
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-
-	channelData.closed = false
-	channelData.publisher = session.id
-	switch session.sessionType {
-	case SESSION_TYPE_RTMP:
-		channelData.publishMethod = PUBLISH_METHOD_RTMP
-	case SESSION_TYPE_WSS:
-		channelData.publishMethod = PUBLISH_METHOD_WS
-	default:
-		channelData.closed = true
-		session.server.coordinator.ReleaseChannel(channelData)
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-	session.AssociateChannel(channel)
-
-	// Find an encoder and assign it
-	encoderServer := session.server.AssignAvailableEncoder()
-	if encoderServer == nil {
-		channelData.closed = true
-		session.server.coordinator.ReleaseChannel(channelData)
-		session.SendPublishDeny(requestId, channel)
-		return
-	}
-
-	encoderServer.AssociateChannel(channel)
-	channelData.encoder = encoderServer.id
-
-	encoderServer.SendEncodeStart(channel, streamId, channelData.publishMethod, session.GeneratePublishSourceURL(channel, key), resolutionList, record, previewsConfig)
-
-	// Release channel data
-	session.server.coordinator.ReleaseChannel(channelData)
-
-	// Accepted
-	session.SendPublishAccept(requestId, channel, streamId)
-}
-
+// Generates the URL for a streaming server
+// channel - The channel
+// key - The streaming key
+// Returns the URL
 func (session *ControlSession) GeneratePublishSourceURL(channel string, key string) string {
 	switch session.sessionType {
 	case SESSION_TYPE_RTMP:
@@ -292,162 +230,8 @@ func (session *ControlSession) GeneratePublishSourceURL(channel string, key stri
 	}
 }
 
-func (session *ControlSession) HandlePublishEnd(channel string, streamId string) {
-	if session.sessionType != SESSION_TYPE_RTMP && session.sessionType != SESSION_TYPE_WSS {
-		return
-	}
-
-	channelData := session.server.coordinator.AcquireChannel(channel)
-
-	if channelData.closed {
-		session.server.coordinator.ReleaseChannel(channelData)
-		return
-	}
-
-	channelData.closed = true
-
-	// Disassociate the channel from the session
-	session.DisassociateChannel(channel)
-
-	// Find encoder and notice it
-	encoderId := channelData.encoder
-	encoderSession := session.server.GetSession(encoderId)
-
-	if encoderSession != nil {
-		encoderSession.SendEncodeStop(channel, streamId)
-		encoderSession.DisassociateChannel(channel)
-	}
-
-	session.server.coordinator.ReleaseChannel(channelData)
-}
-
-func (session *ControlSession) HandleEncoderRegister(capacity int) {
-	if session.sessionType != SESSION_TYPE_HLS {
-		return
-	}
-
-	session.server.coordinator.RegisterEncoder(session.id, capacity)
-
-	session.log("REGISTERED ENCODER / CAPACITY: " + fmt.Sprint(capacity))
-
-	session.encoderRegistered = true
-}
-
-func (session *ControlSession) SendPublishDeny(requestId string, channel string) {
-	params := make(map[string]string)
-
-	params["Request-ID"] = requestId
-	params["Stream-Channel"] = channel
-
-	msg := WebsocketMessage{
-		method: "PUBLISH-DENY",
-		params: params,
-		body:   "",
-	}
-
-	err := session.Send(msg)
-
-	if err != nil {
-		LogError(err)
-	}
-}
-
-func (session *ControlSession) SendPublishAccept(requestId string, channel string, streamId string) {
-	params := make(map[string]string)
-
-	params["Request-ID"] = requestId
-	params["Stream-Channel"] = channel
-	params["Stream-ID"] = streamId
-
-	msg := WebsocketMessage{
-		method: "PUBLISH-ACCEPT",
-		params: params,
-		body:   "",
-	}
-
-	err := session.Send(msg)
-
-	if err != nil {
-		LogError(err)
-	}
-}
-
-func (session *ControlSession) SendStreamKill(channel string, streamId string) {
-	params := make(map[string]string)
-
-	params["Stream-Channel"] = channel
-	params["Stream-ID"] = streamId
-
-	msg := WebsocketMessage{
-		method: "STREAM-KILL",
-		params: params,
-		body:   "",
-	}
-
-	err := session.Send(msg)
-
-	if err != nil {
-		LogError(err)
-	}
-}
-
-func (session *ControlSession) SendEncodeStart(channel string, streamId string, publishType int, publishSourceURL string, resolutionList ResolutionList, record bool, previewsConfig PreviewsConfiguration) {
-	params := make(map[string]string)
-
-	params["Stream-Channel"] = channel
-	params["Stream-ID"] = streamId
-
-	switch publishType {
-	case PUBLISH_METHOD_RTMP:
-		params["Stream-Source-Type"] = "RTMP"
-	case PUBLISH_METHOD_WS:
-		params["Stream-Source-Type"] = "WS"
-	}
-
-	params["Stream-Source-URI"] = publishSourceURL
-
-	params["Resolutions"] = resolutionList.Encode()
-
-	if record {
-		params["Record"] = "True"
-	} else {
-		params["Record"] = "False"
-	}
-
-	params["Previews"] = previewsConfig.Encode()
-
-	msg := WebsocketMessage{
-		method: "ENCODE-START",
-		params: params,
-		body:   "",
-	}
-
-	err := session.Send(msg)
-
-	if err != nil {
-		LogError(err)
-	}
-}
-
-func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
-	params := make(map[string]string)
-
-	params["Stream-Channel"] = channel
-	params["Stream-ID"] = streamId
-
-	msg := WebsocketMessage{
-		method: "ENCODE-STOP",
-		params: params,
-		body:   "",
-	}
-
-	err := session.Send(msg)
-
-	if err != nil {
-		LogError(err)
-	}
-}
-
+// Associates a channel to the session
+// channel - The channel
 func (session *ControlSession) AssociateChannel(channel string) {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
@@ -455,6 +239,8 @@ func (session *ControlSession) AssociateChannel(channel string) {
 	session.associatedChannels[channel] = true
 }
 
+// Disassociates a channel from the session
+// channel - The channel
 func (session *ControlSession) DisassociateChannel(channel string) {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
@@ -462,6 +248,8 @@ func (session *ControlSession) DisassociateChannel(channel string) {
 	delete(session.associatedChannels, channel)
 }
 
+// Gets the list of associated channels
+// Returns the list of channel IDs
 func (session *ControlSession) GetAssociatedChannels() []string {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
