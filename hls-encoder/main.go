@@ -12,4 +12,9 @@ func main() {
 	InitLog()
 
 	LogInfo("Started HLS encoder worker - Version " + VERSION)
+
+	server := &HLS_Encoder_Server{}
+
+	server.Initialize()
+	server.Start()
 }

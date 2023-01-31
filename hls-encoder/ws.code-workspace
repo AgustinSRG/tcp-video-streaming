@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"files.exclude": {
+			"hls-encoder": true,
+			"hls-encoder.exe": true
 		},
 	}
 }
