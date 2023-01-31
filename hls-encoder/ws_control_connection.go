@@ -50,7 +50,7 @@ func (c *ControlServerConnection) Initialize(server *HLS_Encoder_Server) {
 	baseURL := os.Getenv("CONTROL_BASE_URL")
 
 	if baseURL == "" {
-		LogWarning("CONTROL_BASE_URL not provided. The server will run in stand-alone mode.")
+		LogWarning("CONTROL_BASE_URL not provided. The encoding server will not work if not connected to a coordinator server.")
 		c.enabled = false
 		return
 	}
@@ -58,14 +58,14 @@ func (c *ControlServerConnection) Initialize(server *HLS_Encoder_Server) {
 	connectionURL, err := url.Parse(baseURL)
 	if err != nil {
 		LogError(err)
-		LogWarning("CONTROL_BASE_URL not provided. The server will run in stand-alone mode.")
+		LogWarning("CONTROL_BASE_URL not provided. The encoding server will not work if not connected to a coordinator server.")
 		c.enabled = false
 		return
 	}
 	pathURL, err := url.Parse("/ws/control/hls")
 	if err != nil {
 		LogError(err)
-		LogWarning("CONTROL_BASE_URL not provided. The server will run in stand-alone mode.")
+		LogWarning("CONTROL_BASE_URL not provided. The encoding server will not work if not connected to a coordinator server.")
 		c.enabled = false
 		return
 	}
