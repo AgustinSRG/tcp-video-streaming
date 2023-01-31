@@ -100,3 +100,29 @@ In order to force-close streaming session, the application must send **POST** re
  - `x-streaming-id`: Unique identifier of the streaming session to be closed. Use the `*` wildcard to close all streaming sessions for a channel.
 
 The API will end with the **200** status code if succeeded. It will fail with the status code **401** if the authorization is not valid.
+
+### Report
+
+You can use the report command to fetch more detailed information about the status of the streaming cluster.
+
+Send a **GET** request to `http(s)://{COORDINATOR_HOST}:{COORDINATOR_PORT}/commands/report`
+
+The API will end with the **200** status code if succeeded. It will fail with the status code **401** if the authorization is not valid.
+
+The body of the request will be a **JSON** with the following properties:
+
+ - `activeStreams` - List of active streams. Each item has the following properties:
+   - `channel` - Channel ID
+   - `streamId` - Stream ID
+   - `streamServer` - ID of the streaming server where the stream is being published.
+   - `encoder` - ID of the assigned encoder server.
+ - `streamingServers` - List of streaming servers. Each item has the following properties:
+   - `id` - Server identifier
+   - `ip` - Server IP address
+   - `port` - Server port
+   - `ssl` - True if the server uses SSL
+   - `serverType` - Can be either `RTMP` or `WS`
+ - `encoders` - List of encoding servers. Each item has the following properties:
+   - `id` - Encoder identifier
+   - `capacity` - Encoder capacity (-1 means infinite). Number of streams the encoder can handle in parallel
+   - `load` - Number of streams currently being handled by the encoder

@@ -268,6 +268,8 @@ func (server *Streaming_Coordinator_Server) ServeHTTP(w http.ResponseWriter, req
 		server.RunStreamCloseCommand(w, req)
 	} else if req.Method == "GET" && req.RequestURI == "/commands/capacity" {
 		server.RunGetCapacityCommand(w, req)
+	} else if req.Method == "GET" && req.RequestURI == "/commands/report" {
+		server.RunReportCommand(w, req)
 	} else {
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Not found.")
