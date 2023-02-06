@@ -28,17 +28,12 @@ In order to run the server, run the binary without arguments (check the configur
 
 You can configure the server with environment variables.
 
-| Variable Name    | Description                                                                                        |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| SERVER_CAPACITY  | Max number of streams the server can handle in parallel. Set to -1 for unlimited (the default)     |
-| CONTROL_BASE_URL | Websocket URL to connect to the  coordinator server. Example: `wss://10.0.0.0:8080/`               |
-| CONTROL_SECRET   | Secret shared between the coordinator server and the HLS encoder server, in order to authenticate. |
-
-### Storage
-
-You can configure the storage mode settings the `HLS_STORAGE_MODE` to:
-
- - `FILE_SYSTEM` - The default value. Set `HLS_FILESYSTEM_PATH` to the path where the files will be stored.
+| Variable Name       | Description                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| SERVER_CAPACITY     | Max number of streams the server can handle in parallel. Set to -1 for unlimited (the default)     |
+| CONTROL_BASE_URL    | Websocket URL to connect to the  coordinator server. Example: `wss://10.0.0.0:8080/`               |
+| CONTROL_SECRET      | Secret shared between the coordinator server and the HLS encoder server, in order to authenticate. |
+| HLS_FILESYSTEM_PATH | Path where the HLS files will be stored. It may be a remote or distributed file system.            |
 
 ### FFMPEG
 
