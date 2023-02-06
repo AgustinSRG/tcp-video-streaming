@@ -2,3 +2,4 @@ coordinator
 coordinator.exe
 .env
 .tmp
+active_streams.txt

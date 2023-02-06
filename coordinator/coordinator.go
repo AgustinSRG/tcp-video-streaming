@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +27,10 @@ type Streaming_Coordinator struct {
 	streamIdMutex *sync.Mutex // Mutex to ensure stream IDs are unique
 
 	pendingStreamClosedEvents map[string]*PendingStreamClosedEvent // List of stream closed event being sent
+
+	savingActiveStreams             bool   // True if saving active streams
+	pendingSaveActiveStreams        bool   // True if there is pending active streams to save
+	pendingSaveActiveStreamsContent string // Content to save in the pending streams file
 }
 
 const (
@@ -122,61 +125,10 @@ func (coord *Streaming_Coordinator) Initialize() {
 
 	coord.pendingStreamClosedEvents = make(map[string]*PendingStreamClosedEvent)
 
+	coord.pendingSaveActiveStreams = false
+	coord.pendingSaveActiveStreamsContent = ""
+
 	coord.LoadPastActiveStreams()
-}
-
-const ACTIVE_STREAMS_TMP_FILE = "active_streams.tmp"
-
-// Loads the list of active streams from a file
-func (coord *Streaming_Coordinator) LoadPastActiveStreams() {
-	coord.mutex.Lock()
-	defer coord.mutex.Unlock()
-
-	content, err := ioutil.ReadFile(ACTIVE_STREAMS_TMP_FILE)
-
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-
-	for i := 0; i < len(lines); i++ {
-		parts := strings.Split(lines[i], ":")
-
-		if len(parts) != 2 {
-			continue
-		}
-
-		channel := parts[0]
-		streamId := parts[1]
-
-		coord.activeStreams[channel+":"+streamId] = true
-
-		event := &PendingStreamClosedEvent{
-			channel:   channel,
-			streamId:  streamId,
-			cancelled: false,
-		}
-
-		coord.pendingStreamClosedEvents[streamId] = event
-
-		go SendStreamClosedEvent(coord, event)
-	}
-}
-
-// Saves the current list of active streams to a file
-func (coord *Streaming_Coordinator) SavePastActiveStreams() {
-	str := ""
-
-	for stream := range coord.activeStreams {
-		str += stream + "\n"
-	}
-
-	err := ioutil.WriteFile(ACTIVE_STREAMS_TMP_FILE, []byte(str), FILE_PERMISSION)
-
-	if err != nil {
-		LogError(err)
-	}
 }
 
 // Acquires the access to a streaming channel data struct
