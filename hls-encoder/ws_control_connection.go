@@ -3,9 +3,11 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,24 +98,6 @@ func (c *ControlServerConnection) Connect() {
 		headers.Set("x-control-auth-token", authToken)
 	}
 
-	externalIP := os.Getenv("EXTERNAL_IP")
-
-	if externalIP != "" {
-		headers.Set("x-external-ip", externalIP)
-	}
-
-	externalPort := os.Getenv("EXTERNAL_PORT")
-
-	if externalPort != "" {
-		headers.Set("x-custom-port", externalPort)
-	}
-
-	useSSL := os.Getenv("EXTERNAL_SSL")
-
-	if useSSL == "YES" {
-		headers.Set("x-ssl-use", "true")
-	}
-
 	conn, _, err := websocket.DefaultDialer.Dial(c.connectionURL, headers)
 
 	if err != nil {
@@ -127,8 +111,11 @@ func (c *ControlServerConnection) Connect() {
 
 	c.lock.Unlock()
 
+	// Right after connecting, send the REGISTER message
+	c.SendRegister(c.server.capacity)
+
 	// After a connection is established, any previous encoding tasks must be stopped
-	// TODO
+	c.server.KillAllActiveTasks()
 
 	go c.RunReaderLoop(conn)
 }
@@ -218,7 +205,11 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
 	switch msg.method {
 	case "ERROR":
-		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.params["error-code"] + " / Details: " + msg.params["error-message"])
+		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.GetParam("Error-Code") + " / Details: " + msg.GetParam("Error-Message"))
+	case "ENCODE-START":
+		c.ReceiveEncodeStart(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Source-Type"), msg.GetParam("Stream-Source-URI"), DecodeResolutionsList(msg.GetParam("Resolutions")), strings.ToLower(msg.GetParam("Record")) == "true", DecodePreviewsConfiguration(msg.GetParam("Previews")))
+	case "ENCODE-STOP":
+		c.ReceiveEncodeStop(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
 	}
 }
 
@@ -235,5 +226,87 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 		}
 
 		c.Send(heartbeatMessage)
+	}
+}
+
+// Sends REGISTER message
+// capacity - Server capacity
+func (c *ControlServerConnection) SendRegister(capacity int) bool {
+	msgParams := make(map[string]string)
+
+	msgParams["Capacity"] = fmt.Sprint(capacity)
+
+	msg := WebsocketMessage{
+		method: "REGISTER",
+		params: msgParams,
+		body:   "",
+	}
+
+	return c.Send(msg)
+}
+
+// Sends STREAM-AVAILABLE message
+// channel - Channel ID
+// streamId - Stream ID
+// streamType - Sub-stream type. Can be HLS-LIVE, HLS-VOD or IMG-PREVIEW
+// resolution - Video resolution
+// indexFile - Stream index file
+func (c *ControlServerConnection) SendStreamAvailable(channel string, streamId string, streamType string, resolution Resolution, indexFile string) bool {
+	msgParams := make(map[string]string)
+
+	msgParams["Stream-Channel"] = channel
+	msgParams["Stream-ID"] = streamId
+	msgParams["Stream-Type"] = streamType
+	msgParams["Resolution"] = resolution.Encode()
+	msgParams["Index-file"] = indexFile
+
+	msg := WebsocketMessage{
+		method: "STREAM-AVAILABLE",
+		params: msgParams,
+		body:   "",
+	}
+
+	return c.Send(msg)
+}
+
+// Sends STREAM-CLOSED message
+// channel - Channel ID
+// streamId - Stream ID
+func (c *ControlServerConnection) SendStreamClosed(channel string, streamId string) bool {
+	msgParams := make(map[string]string)
+
+	msgParams["Stream-Channel"] = channel
+	msgParams["Stream-ID"] = streamId
+
+	msg := WebsocketMessage{
+		method: "STREAM-CLOSED",
+		params: msgParams,
+		body:   "",
+	}
+
+	return c.Send(msg)
+}
+
+// Receives an ENCODE-START message
+// channel - Channel ID
+// streamId - Stream ID
+// sourceType - Source type. Can be: RTMP or WS
+// sourceURI - Source URI. With the host, port, stream channel and key
+// resolutions - List of resolutions to resize the video stream
+// record - True if recording is enabled
+// previews - Configuration for making stream previews
+func (c *ControlServerConnection) ReceiveEncodeStart(channel string, streamId string, sourceType string, sourceURI string, resolutions ResolutionList, record bool, previews PreviewsConfiguration) {
+	c.server.CreateTask(channel, streamId, sourceType, sourceURI, resolutions, record, previews)
+}
+
+// Receives an ENCODE-STOP message
+// channel - Channel ID
+// streamId - Stream ID
+func (c *ControlServerConnection) ReceiveEncodeStop(channel string, streamId string) {
+	task := c.server.GetTask(channel, streamId)
+
+	if task != nil {
+		LogTaskStatus(channel, streamId, "Killing task...")
+		task.Kill()
 	}
 }

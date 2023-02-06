@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -13,11 +12,11 @@ import (
 var LOG_MUTEX = sync.Mutex{}
 
 var LOG_DEBUG_ENABLED = false
-var LOG_REQUESTS_ENABLED = false
+var LOG_TASKS_ENABLED = false
 
 func InitLog() {
 	LOG_DEBUG_ENABLED = (os.Getenv("LOG_DEBUG") == "YES")
-	LOG_REQUESTS_ENABLED = (os.Getenv("LOG_REQUESTS") != "NO")
+	LOG_TASKS_ENABLED = (os.Getenv("LOG_TASK_STATUS") != "NO")
 }
 
 func LogLine(line string) {
@@ -43,9 +42,9 @@ func LogErrorMessage(err string) {
 	LogLine("[ERROR] " + err)
 }
 
-func LogRequest(session_id uint64, ip string, line string) {
-	if LOG_REQUESTS_ENABLED {
-		LogLine("[REQUEST] #" + strconv.Itoa(int(session_id)) + " (" + ip + ") " + line)
+func LogTaskStatus(channel string, streamId string, line string) {
+	if LOG_TASKS_ENABLED {
+		LogLine("[TASK] [" + channel + "/" + streamId + "]" + line)
 	}
 }
 
@@ -55,8 +54,8 @@ func LogDebug(line string) {
 	}
 }
 
-func LogDebugSession(session_id uint64, ip string, line string) {
+func LogDebugTask(channel string, streamId string, line string) {
 	if LOG_DEBUG_ENABLED {
-		LogLine("[DEBUG] #" + strconv.Itoa(int(session_id)) + " (" + ip + ") " + line)
+		LogLine("[DEBUG] [TASK] [" + channel + "/" + streamId + "]" + line)
 	}
 }

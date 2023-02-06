@@ -48,7 +48,7 @@ If the `ffmpeg` and `ffprobe` binaries are not in `/usr/bin`, you must specify i
 
 Here is a list with more options you can configure:
 
-| Variable Name | Description                               |
-| ------------- | ----------------------------------------- |
-| LOG_REQUESTS  | Set to `YES` or `NO`. By default is `YES` |
-| LOG_DEBUG     | Set to `YES` or `NO`. By default is `NO`  |
+| Variable Name   | Description                               |
+| --------------- | ----------------------------------------- |
+| LOG_TASK_STATUS | Set to `YES` or `NO`. By default is `YES` |
+| LOG_DEBUG       | Set to `YES` or `NO`. By default is `NO`  |
