@@ -10,7 +10,7 @@ import (
 
 	child_process_manager "github.com/AgustinSRG/go-child-process-manager"
 
-	"github.com/vansante/go-ffprobe"
+	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
 var (

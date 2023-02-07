@@ -6,7 +6,7 @@ github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWm
 github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/joho/godotenv v1.4.0 h1:3l4+N6zfMWnkbPEXKng2o2/MR5mSwTrBih4ZEkkz1lg=
 github.com/joho/godotenv v1.4.0/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
-github.com/vansante/go-ffprobe v1.1.0 h1:Tz5X+38tF8YYEFVz+PUTrtvlED35IorB7XI0USOqZWU=
-github.com/vansante/go-ffprobe v1.1.0/go.mod h1:AEIxsTWYTTeXpel90yu5J/QxuDWNaKCO50xRBN4rdac=
 golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 h1:UiNENfZ8gDvpiWw7IpOMQ27spWmThO1RwwdQVbJahJM=
 golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+gopkg.in/vansante/go-ffprobe.v2 v2.1.1 h1:DIh5fMn+tlBvG7pXyUZdemVmLdERnf2xX6XOFF+0BBU=
+gopkg.in/vansante/go-ffprobe.v2 v2.1.1/go.mod h1:qF0AlAjk7Nqzqf3y333Ly+KxN3cKF2JqA3JT5ZheUGE=
