@@ -27,6 +27,8 @@ type HLS_Encoder_Server struct {
 
 // Encoding task data
 type EncodingTask struct {
+	server *HLS_Encoder_Server // Reference to the server
+
 	channel  string // ID of the channel
 	streamId string // ID of the stream
 
@@ -95,6 +97,13 @@ func (server *HLS_Encoder_Server) Start() {
 }
 
 func (server *HLS_Encoder_Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	LogDebug(req.Method + " " + req.RequestURI)
+
+	if req.Method == "PUT" {
+		w.WriteHeader(200)
+		return
+	}
+
 	w.WriteHeader(200)
 	fmt.Fprintf(w, "HLS encoding server - Version "+VERSION)
 }
@@ -136,6 +145,7 @@ func (server *HLS_Encoder_Server) CreateTask(channel string, streamId string, so
 	}
 
 	newTask := &EncodingTask{
+		server:      server,
 		channel:     channel,
 		streamId:    streamId,
 		sourceType:  sourceType,
@@ -153,7 +163,7 @@ func (server *HLS_Encoder_Server) CreateTask(channel string, streamId string, so
 
 	LogTaskStatus(channel, streamId, "Task created | Server load: "+fmt.Sprint(server.load))
 	if LOG_DEBUG_ENABLED {
-		LogDebugTask(channel, streamId, "Task details: sourceType="+sourceType+" | sourceURI="+sourceURI+" | resolutions="+resolutions.Encode()+" | record="+fmt.Sprint(record)+" | previews="+previews.Encode())
+		LogDebugTask(channel, streamId, "Task details: sourceType="+sourceType+" | sourceURI="+sourceURI+" | resolutions="+resolutions.Encode()+" | record="+fmt.Sprint(record)+" | previews="+previews.Encode("-"))
 	}
 
 	go newTask.Run()

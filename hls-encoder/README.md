@@ -44,6 +44,15 @@ If the `ffmpeg` and `ffprobe` binaries are not in `/usr/bin`, you must specify i
 | FFMPEG_PATH   | Path to `ffmpeg` binary  |
 | FFPROBE_PATH  | Path to `ffprobe` binary |
 
+### HLS
+
+Additional configuration for HLS
+
+| Variable Name          | Description                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| HLS_TIME_SECONDS       | Duration (seconds) of each video fragment (by default 3 seconds). |
+| HLS_LIVE_PLAYLIST_SIZE | Max number of fragments in the live playlist (10 by default)      |
+
 ### More options
 
 Here is a list with more options you can configure:

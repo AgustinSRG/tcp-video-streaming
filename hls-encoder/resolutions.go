@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -137,9 +138,10 @@ type PreviewsConfiguration struct {
 }
 
 // Encodes previews configuration to string
-func (pc *PreviewsConfiguration) Encode() string {
+// delimiter - The delimiter (size - delay)
+func (pc *PreviewsConfiguration) Encode(delimiter string) string {
 	if pc.enabled {
-		return fmt.Sprint(pc.width) + "x" + fmt.Sprint(pc.height) + "," + fmt.Sprint(pc.delaySeconds)
+		return fmt.Sprint(pc.width) + "x" + fmt.Sprint(pc.height) + delimiter + fmt.Sprint(pc.delaySeconds)
 	} else {
 		return "False"
 	}
@@ -147,9 +149,10 @@ func (pc *PreviewsConfiguration) Encode() string {
 
 // Decodes previews configuration from string
 // str - String to parse
+// delimiter - The delimiter (size - delay)
 // Returns the configuration params
-func DecodePreviewsConfiguration(str string) PreviewsConfiguration {
-	delayParts := strings.Split(str, ",")
+func DecodePreviewsConfiguration(str string, delimiter string) PreviewsConfiguration {
+	delayParts := strings.Split(str, delimiter)
 
 	if len(delayParts) == 2 {
 		delaySeconds, err := strconv.ParseInt(strings.Trim(delayParts[1], " "), 10, 32)
@@ -194,5 +197,121 @@ func DecodePreviewsConfiguration(str string) PreviewsConfiguration {
 		return PreviewsConfiguration{
 			enabled: false,
 		}
+	}
+}
+
+// Gets resolution list for encoding
+// originalResolution - Original resolution
+// list - Configured resolutions list
+// Returns a list of resolutions
+func GetActualResolutionList(originalResolution Resolution, list ResolutionList) []Resolution {
+	result := make([]Resolution, 0)
+	var smallerResolution *Resolution = nil
+	resultSet := make(map[string]bool)
+
+	if list.hasOriginal {
+		resultSet[originalResolution.Encode()] = true
+	}
+
+	originalWidth := originalResolution.width
+
+	if originalWidth <= 0 {
+		originalWidth = 1
+	}
+
+	originalHeight := originalResolution.height
+
+	if originalHeight <= 0 {
+		originalHeight = 1
+	}
+
+	originalFPS := originalResolution.fps
+
+	if originalFPS <= 0 {
+		originalFPS = 30
+	}
+
+	for i := 0; i < len(list.resolutions); i++ {
+		fitWidth := list.resolutions[i].width
+
+		if fitWidth <= 0 {
+			fitWidth = 1
+		}
+
+		if fitWidth%2 != 0 {
+			fitWidth++
+		}
+
+		fitHeight := list.resolutions[i].height
+
+		if fitHeight <= 0 {
+			fitHeight = 1
+		}
+
+		if fitHeight%2 != 0 {
+			fitHeight++
+		}
+
+		fitFPS := list.resolutions[i].fps
+
+		if fitFPS <= 0 {
+			fitFPS = originalFPS
+		}
+
+		finalResolution := Resolution{
+			width:  fitWidth,
+			height: fitHeight,
+			fps:    fitFPS,
+		}
+
+		if originalFPS < fitFPS {
+			finalResolution.fps = originalFPS
+		}
+
+		proportionalHeight := int(math.Ceil((float64(originalHeight)*float64(fitWidth)/float64(originalWidth))/2) * 2)
+		proportionalWidth := int(math.Ceil((float64(originalWidth)*float64(fitHeight)/float64(originalHeight))/2) * 2)
+
+		if originalWidth > originalHeight {
+			if proportionalHeight > fitHeight {
+				finalResolution.width = proportionalWidth
+			} else {
+				finalResolution.height = proportionalHeight
+			}
+		} else {
+			if proportionalWidth > fitWidth {
+				finalResolution.height = proportionalHeight
+			} else {
+				finalResolution.width = proportionalWidth
+			}
+		}
+
+		resolutionId := finalResolution.Encode()
+
+		if resultSet[resolutionId] {
+			continue
+		}
+
+		resultSet[resolutionId] = true
+
+		if smallerResolution == nil || (finalResolution.width <= smallerResolution.width && finalResolution.height <= smallerResolution.height && finalResolution.fps <= smallerResolution.fps) {
+			smallerResolution = &finalResolution
+		}
+
+		if finalResolution.height <= originalHeight && finalResolution.width <= originalWidth {
+			// Smaller, append
+			result = append(result, finalResolution)
+		}
+	}
+
+	if len(result) > 0 {
+		return result
+	} else if !list.hasOriginal && smallerResolution != nil {
+		return []Resolution{{
+			width:  smallerResolution.width,
+			height: smallerResolution.height,
+			fps:    smallerResolution.fps,
+		}}
+	} else {
+		return result
 	}
 }

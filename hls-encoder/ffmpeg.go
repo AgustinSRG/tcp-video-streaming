@@ -4,6 +4,8 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -30,9 +32,97 @@ func SetFFMPEGBinaries(ffmpeg_path string, ffprobe_path string) {
 	ffprobe.SetFFProbeBinPath(FFPROBE_BINARY_PATH)
 }
 
+// Prepares a FFMPEG command from the task
+// task - Reference to the task
+// probeData - Stream metadata (from FFPROBE)
+// Returns:
+//    command - The configured command
+//    srcManager - The source manager (optional, can be nil)
+//    cmdErr - Error
+func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeData) (command *exec.Cmd, srcManager InputSourceManager, cmdErr error) {
+	cmd := exec.Command(FFMPEG_BINARY_PATH)
+
+	cmd.Args = make([]string, 1)
+
+	cmd.Args[0] = FFMPEG_BINARY_PATH
+
+	cmd.Args = append(cmd.Args, "-y") // Overwrite
+
+	// Add input source
+
+	sourceManager, err := PrepareEncodingProcessToReceiveSource(cmd, task.sourceType, task.sourceURI)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	videoStream := probeData.FirstVideoStream()
+	audioStream := probeData.FirstAudioStream()
+
+	if videoStream == nil {
+		return nil, nil, errors.New("The input source does not have a video stream")
+	}
+
+	videoWidth := videoStream.Width
+	videoHeight := videoStream.Height
+	videoFPS := ParseFrameRate(videoStream.AvgFrameRate)
+
+	// Add original output
+	if task.resolutions.hasOriginal {
+		if videoStream.CodecName == "h264" && (audioStream == nil || audioStream.CodecName == "aac") {
+			// No need to re-encode, copy the stream
+
+			cmd.Args = append(cmd.Args, "-vcodec", "copy", "-acodec", "copy")
+		} else {
+			// Encode
+
+			cmd.Args = append(cmd.Args, "-vcodec", "libx264", "-acodec", "aac")
+			cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
+		}
+		AppendGenericHLSArguments(cmd, Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task)
+	}
+
+	// Add resized outputs
+	resolutions := GetActualResolutionList(Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task.resolutions)
+	for i := 0; i < len(resolutions); i++ {
+		cmd.Args = append(cmd.Args, "-vcodec", "libx264", "-acodec", "aac")
+
+		videoFilter := ""
+
+		if resolutions[i].fps >= 0 && resolutions[i].fps != videoFPS {
+			videoFilter += "fps=" + fmt.Sprint(resolutions[i].fps) + ","
+		}
+
+		videoFilter += "scale=" + fmt.Sprint(resolutions[i].width) + ":" + fmt.Sprint(resolutions[i].height)
+
+		cmd.Args = append(cmd.Args, "-vf", videoFilter) // Scale and FPS
+
+		AppendGenericHLSArguments(cmd, resolutions[i], task)
+	}
+
+	// Add previews (if enabled)
+
+	if task.previews.enabled {
+		cmd.Args = append(cmd.Args, "-f", "image2")
+
+		videoFilter := "fps=1/" + fmt.Sprint(task.previews.delaySeconds) +
+			",scale=" + fmt.Sprint(task.previews.width) + ":" + fmt.Sprint(task.previews.height) +
+			":force_original_aspect_ratio=decrease,pad=" + fmt.Sprint(task.previews.width) + ":" + fmt.Sprint(task.previews.height) +
+			":(ow-iw)/2:(oh-ih)/2"
+
+		cmd.Args = append(cmd.Args, "-vf", videoFilter)
+
+		cmd.Args = append(cmd.Args, "-protocol_opts", "method=PUT")
+
+		cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/%d.jpg")
+	}
+
+	return cmd, sourceManager, nil
+}
+
 // Parses frame rate from string returned by ffprobe
 // fr - Frame rate in format 'f/t'
-func ParseFrameRate(fr string) int32 {
+func ParseFrameRate(fr string) int {
 	if fr == "" {
 		return 0
 	}
@@ -50,7 +140,7 @@ func ParseFrameRate(fr string) int32 {
 			return 0
 		}
 
-		return int32(n) / int32(n2)
+		return n / n2
 	} else if len(parts) == 1 {
 		n, err := strconv.Atoi(parts[0])
 
@@ -58,7 +148,7 @@ func ParseFrameRate(fr string) int32 {
 			return 0
 		}
 
-		return int32(n)
+		return n
 	} else {
 		return 0
 	}

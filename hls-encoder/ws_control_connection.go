@@ -209,7 +209,7 @@ func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
 	case "ERROR":
 		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.GetParam("Error-Code") + " / Details: " + msg.GetParam("Error-Message"))
 	case "ENCODE-START":
-		c.ReceiveEncodeStart(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Source-Type"), msg.GetParam("Stream-Source-URI"), DecodeResolutionsList(msg.GetParam("Resolutions")), strings.ToLower(msg.GetParam("Record")) == "true", DecodePreviewsConfiguration(msg.GetParam("Previews")))
+		c.ReceiveEncodeStart(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Source-Type"), msg.GetParam("Stream-Source-URI"), DecodeResolutionsList(msg.GetParam("Resolutions")), strings.ToLower(msg.GetParam("Record")) == "true", DecodePreviewsConfiguration(msg.GetParam("Previews"), ","))
 	case "ENCODE-STOP":
 		c.ReceiveEncodeStop(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
 	}
