@@ -4,6 +4,8 @@ package main
 
 import (
 	"bufio"
+	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -62,40 +64,10 @@ func ParseFrameRate(fr string) int32 {
 	}
 }
 
-// Runs FFMPEG command asynchronously (the child process can be managed)
-// cmd - Command to run
-// input_duration - Duration in seconds (used to calculate progress)
+// Reads progress and calls a reporter
+// pipe - Stderr pipe
 // progress_reporter - Function called each time ffmpeg reports progress via standard error
-// Note: If you return true in progress_reporter, the process will be killed (use this to interrupt tasks)
-func RunFFMpegCommandAsync(cmd *exec.Cmd, progress_reporter func(time float64, frames uint64) bool) error {
-	// Configure command
-	err := child_process_manager.ConfigureCommand(cmd)
-	if err != nil {
-		return err
-	}
-
-	// Create a pipe to read StdErr
-	pipe, err := cmd.StderrPipe()
-
-	if err != nil {
-		return err
-	}
-
-	// Start the command
-
-	LogDebug("Running command: " + cmd.String())
-
-	err = cmd.Start()
-
-	if err != nil {
-		return err
-	}
-
-	// Add process as a child process
-	child_process_manager.AddChildProcess(cmd.Process)
-
-	// Read stderr line by line
-
+func ReadFFMPEGProgress(pipe io.ReadCloser, progress_reporter func(time float64, frames uint64)) {
 	reader := bufio.NewReader(pipe)
 
 	var finished bool = false
@@ -158,21 +130,47 @@ func RunFFMpegCommandAsync(cmd *exec.Cmd, progress_reporter func(time float64, f
 		out_duration := float64(hours)*3600 + float64(minutes)*60 + seconds
 
 		if out_duration > 0 {
-			shouldKill := progress_reporter(out_duration, uint64(frames))
-
-			if shouldKill {
-				cmd.Process.Kill()
-			}
+			progress_reporter(out_duration, uint64(frames))
 		}
 	}
+}
 
-	// Wait for ending
-
-	err = cmd.Wait()
-
+// Runs FFMPEG command asynchronously (the child process can be managed)
+// cmd - Command to run
+// input_duration - Duration in seconds (used to calculate progress)
+// progress_reporter - Function called each time ffmpeg reports progress via standard error
+func RunFFMpegCommandAsync(cmd *exec.Cmd, progress_reporter func(time float64, frames uint64)) (process *os.Process, cmdErr error) {
+	// Configure command
+	err := child_process_manager.ConfigureCommand(cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Create a pipe to read StdErr
+	pipe, err := cmd.StderrPipe()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Start the command
+
+	LogDebug("Running command: " + cmd.String())
+
+	err = cmd.Start()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Add process as a child process
+	child_process_manager.AddChildProcess(cmd.Process)
+
+	// Read stderr line by line
+
+	go ReadFFMPEGProgress(pipe, progress_reporter)
+
+	// Return process
+
+	return cmd.Process, nil
 }
