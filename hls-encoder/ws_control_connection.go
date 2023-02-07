@@ -177,6 +177,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 		err := conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 		if err != nil {
+			conn.Close()
 			c.OnDisconnect(err)
 			return
 		}
@@ -184,6 +185,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 		_, message, err := conn.ReadMessage()
 
 		if err != nil {
+			conn.Close()
 			c.OnDisconnect(err)
 			return
 		}
