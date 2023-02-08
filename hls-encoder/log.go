@@ -13,9 +13,11 @@ var LOG_MUTEX = sync.Mutex{}
 
 var LOG_DEBUG_ENABLED = false
 var LOG_TASKS_ENABLED = false
+var LOG_FFMPEG_TRACE = false
 
 func InitLog() {
 	LOG_DEBUG_ENABLED = (os.Getenv("LOG_DEBUG") == "YES")
+	LOG_FFMPEG_TRACE = (os.Getenv("LOG_FFMPEG_TRACE") == "YES")
 	LOG_TASKS_ENABLED = (os.Getenv("LOG_TASK_STATUS") != "NO")
 }
 
@@ -51,6 +53,12 @@ func LogTaskStatus(channel string, streamId string, line string) {
 func LogDebug(line string) {
 	if LOG_DEBUG_ENABLED {
 		LogLine("[DEBUG] " + line)
+	}
+}
+
+func LogTrace(line string) {
+	if LOG_FFMPEG_TRACE {
+		LogLine("[TRACE] " + line)
 	}
 }
 

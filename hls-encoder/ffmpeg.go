@@ -171,7 +171,7 @@ func ReadFFMPEGProgress(pipe io.ReadCloser, progress_reporter func(time float64,
 
 		line = strings.ReplaceAll(line, "\r", "")
 
-		LogDebug("[FFMPEG] " + line)
+		LogTrace("[FFMPEG] " + line)
 
 		if !strings.HasPrefix(line, "frame=") {
 			continue // Not a progress line
@@ -244,8 +244,6 @@ func RunFFMpegCommandAsync(cmd *exec.Cmd, progress_reporter func(time float64, f
 	}
 
 	// Start the command
-
-	LogDebug("Running command: " + cmd.String())
 
 	err = cmd.Start()
 
