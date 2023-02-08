@@ -25,29 +25,6 @@ type HLS_Encoder_Server struct {
 	tasks map[string]*EncodingTask // List of active encoding tasks. Map (channel:streamId) -> Task
 }
 
-// Encoding task data
-type EncodingTask struct {
-	server *HLS_Encoder_Server // Reference to the server
-
-	channel  string // ID of the channel
-	streamId string // ID of the stream
-
-	sourceType string // Source type: WS or RTMP
-	sourceURI  string // Source URI (eg: ws://host:port/channel/key or rtmp://host:port/channel/key)
-
-	record bool // True if recording is enabled
-
-	resolutions ResolutionList // List of resolutions for resizing
-
-	previews PreviewsConfiguration // Configuration for making the previews
-
-	mutex *sync.Mutex // Mutex to access the status data
-
-	process *os.Process // Encoding process reference
-
-	killed bool // True if the task was killed
-}
-
 // Initializes the encoder
 func (server *HLS_Encoder_Server) Initialize() {
 	server.mutex = &sync.Mutex{}
@@ -156,6 +133,7 @@ func (server *HLS_Encoder_Server) CreateTask(channel string, streamId string, so
 		killed:      false,
 		mutex:       &sync.Mutex{},
 		process:     nil,
+		subStreams:  make(map[string]*SubStreamStatus),
 	}
 
 	server.tasks[taskId] = newTask
