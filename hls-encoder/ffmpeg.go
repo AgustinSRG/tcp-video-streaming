@@ -114,7 +114,7 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 		cmd.Args = append(cmd.Args, "-protocol_opts", "method=PUT")
 
-		cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/%d.jpg")
+		cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/img-preview/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/%d.jpg")
 	}
 
 	return cmd, sourceManager, nil

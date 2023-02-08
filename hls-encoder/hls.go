@@ -65,8 +65,8 @@ func AppendGenericHLSArguments(cmd *exec.Cmd, resolution Resolution, task *Encod
 
 	// Method and URL
 	cmd.Args = append(cmd.Args, "-method", "PUT")
-	cmd.Args = append(cmd.Args, "-hls_segment_filename", "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/"+task.channel+"/"+task.streamId+"/"+resolution.Encode()+"/%d.ts")
-	cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/"+task.channel+"/"+task.streamId+"/"+resolution.Encode()+"/index.m3u8")
+	cmd.Args = append(cmd.Args, "-hls_segment_filename", "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/hls/"+task.channel+"/"+task.streamId+"/"+resolution.Encode()+"/%d.ts")
+	cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/hls/"+task.channel+"/"+task.streamId+"/"+resolution.Encode()+"/index.m3u8")
 }
 
 const (
