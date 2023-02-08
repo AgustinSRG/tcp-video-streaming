@@ -110,18 +110,24 @@ func (server *HLS_Encoder_Server) CreateTask(channel string, streamId string, so
 	}
 
 	newTask := &EncodingTask{
-		server:      server,
-		channel:     channel,
-		streamId:    streamId,
-		sourceType:  sourceType,
-		sourceURI:   sourceURI,
-		resolutions: resolutions,
-		record:      record,
-		previews:    previews,
-		killed:      false,
-		mutex:       &sync.Mutex{},
-		process:     nil,
-		subStreams:  make(map[string]*SubStreamStatus),
+		server:                      server,
+		channel:                     channel,
+		streamId:                    streamId,
+		sourceType:                  sourceType,
+		sourceURI:                   sourceURI,
+		resolutions:                 resolutions,
+		record:                      record,
+		previews:                    previews,
+		killed:                      false,
+		mutex:                       &sync.Mutex{},
+		process:                     nil,
+		subStreams:                  make(map[string]*SubStreamStatus),
+		previewsCount:               0,
+		previewsAvailable:           false,
+		previewsReady:               make(map[int]bool),
+		writingPreviewsIndex:        false,
+		pendingWritePreviewsIndex:   false,
+		pendingPreviewsIndexContent: nil,
 	}
 
 	server.tasks[taskId] = newTask

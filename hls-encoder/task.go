@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"sync"
 )
@@ -31,9 +32,19 @@ type EncodingTask struct {
 
 	subStreams map[string]*SubStreamStatus // Sub-Streams
 
-	previewsCount     int          // Number of available previews
-	previewsAvailable int          // True if the previews stream is available
-	previewsReady     map[int]bool // Map to check when fragments are ready
+	previewsCount               int          // Number of available previews
+	previewsAvailable           bool         // True if the previews stream is available
+	previewsReady               map[int]bool // Map to check when fragments are ready
+	writingPreviewsIndex        bool         // True if the task is writing the previews index
+	pendingWritePreviewsIndex   bool         // True if there is a pending write for the previews index
+	pendingPreviewsIndexContent []byte       // Content to write the previews index
+}
+
+// Stores previews metadata
+type PreviewsIndexFile struct {
+	IndexStart int    `json:"index_start"` // Index of the first image
+	Count      int    `json:"count"`       // Number of available images
+	Pattern    string `json:"pattern"`     // Image files pattern
 }
 
 // Stores status for a specific sub-stream
@@ -63,10 +74,111 @@ func (task *EncodingTask) debug(str string) {
 }
 
 func (task *EncodingTask) OnFragmentReady(resolution Resolution, fragmentIndex int) {
+	task.mutex.Lock()
+	defer task.mutex.Unlock()
 }
 
 func (task *EncodingTask) OnPlaylistUpdate(resolution Resolution, playlist *HLS_PlayList) {
+	task.mutex.Lock()
+	defer task.mutex.Unlock()
 }
 
 func (task *EncodingTask) OnPreviewImageReady(previewIndex int) {
+	task.mutex.Lock()
+	defer task.mutex.Unlock()
+
+	if previewIndex < task.previewsCount {
+		return // Ignore already added images
+	}
+
+	task.previewsReady[previewIndex] = true
+
+	oldCount := task.previewsCount
+	newCount := oldCount
+	doneCounting := false
+
+	for !doneCounting {
+		if task.previewsReady[newCount+1] {
+			delete(task.previewsReady, newCount+1)
+			newCount++
+		} else {
+			doneCounting = true
+		}
+	}
+
+	if oldCount != newCount {
+		// Update new count
+		task.previewsCount = newCount
+
+		// Update index file
+		newIndexFile := PreviewsIndexFile{
+			IndexStart: 0,
+			Count:      newCount,
+			Pattern:    "%d.jpg",
+		}
+
+		data, err := json.Marshal(newIndexFile)
+
+		if err != nil {
+			LogError(err)
+			return
+		}
+
+		task.writingPreviewsIndex = true
+		go task.SaveImagePreviewsIndex(data)
+	}
+}
+
+// Call after the image previews index is successfully saved
+func (task *EncodingTask) OnImagePreviewsIndexSaved() {
+	shouldAnnounce := false
+	task.mutex.Lock()
+
+	if !task.previewsAvailable {
+		task.previewsAvailable = true
+		shouldAnnounce = true
+	}
+
+	task.mutex.Unlock()
+
+	if shouldAnnounce {
+		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "IMG-PREVIEW", Resolution{
+			width:  task.previews.width,
+			height: task.previews.height,
+			fps:    task.previews.delaySeconds},
+			"img-preview/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/index.json",
+		)
+	}
+}
+
+// Saves image previews index
+// data - Contents of the index file
+func (task *EncodingTask) SaveImagePreviewsIndex(data []byte) {
+	filePath := "img-preview/" + task.channel + "/" + task.streamId + "/" + task.previews.Encode("-") + "/index.json"
+	done := false
+
+	dataToWrite := data
+
+	for !done {
+		err := WriteFileBytes(filePath, dataToWrite)
+
+		if err != nil {
+			LogError(err)
+		} else {
+			task.OnImagePreviewsIndexSaved()
+		}
+
+		task.mutex.Lock()
+
+		if task.pendingWritePreviewsIndex {
+			task.pendingWritePreviewsIndex = false
+			dataToWrite = task.pendingPreviewsIndexContent
+			task.pendingPreviewsIndexContent = nil
+		} else {
+			task.writingPreviewsIndex = false
+			done = true
+		}
+
+		task.mutex.Unlock()
+	}
 }
