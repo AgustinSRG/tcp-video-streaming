@@ -33,6 +33,6 @@ func ProbeStreamSource_RTMP(sourceURI string) (probeData *ffprobe.ProbeData, err
 //  manager - A manager to control the source. In this case, no manager is needed, so it will return nil
 //  err - Error
 func PrepareEncodingProcessToReceiveSource_RTMP(cmd *exec.Cmd, sourceURI string) (manager InputSourceManager, err error) {
-	cmd.Args = append(cmd.Args, "-i", sourceURI)
+	cmd.Args = append(cmd.Args, "-i", sourceURI+"?cache=clear")
 	return nil, nil
 }
