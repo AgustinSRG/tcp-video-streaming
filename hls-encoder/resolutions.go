@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -48,6 +49,67 @@ func (list *ResolutionList) Encode() string {
 	}
 
 	return str
+}
+
+// Decodes resolution
+// str - Encoded resolution
+// Returns the decoded resolution
+func DecodeResolution(str string) (resolution Resolution, resErr error) {
+	fpsParts := strings.Split(strings.Trim(str, " "), "-")
+
+	if len(fpsParts) == 2 {
+		resParts := strings.Split(fpsParts[0], "x")
+
+		if len(resParts) == 2 {
+			width, err := strconv.ParseInt(resParts[0], 10, 32)
+
+			if err != nil {
+				return Resolution{}, err
+			}
+
+			height, err := strconv.ParseInt(resParts[1], 10, 32)
+
+			if err != nil {
+				return Resolution{}, err
+			}
+
+			fps, err := strconv.ParseInt(fpsParts[1], 10, 32)
+
+			if err != nil {
+				return Resolution{}, err
+			}
+
+			return Resolution{
+				width:  int(width),
+				height: int(height),
+				fps:    int(fps),
+			}, nil
+		}
+	} else if len(fpsParts) == 1 {
+		resParts := strings.Split(fpsParts[0], "x")
+
+		if len(resParts) == 2 {
+			width, err := strconv.ParseInt(resParts[0], 10, 32)
+
+			if err != nil {
+				return Resolution{}, err
+			}
+
+			height, err := strconv.ParseInt(resParts[1], 10, 32)
+
+			if err != nil {
+				return Resolution{}, err
+			}
+
+			return Resolution{
+				width:  int(width),
+				height: int(height),
+				fps:    -1,
+			}, nil
+		}
+	}
+
+	return Resolution{}, errors.New("Invalid resolution")
 }
 
 // Decodes a resolution list

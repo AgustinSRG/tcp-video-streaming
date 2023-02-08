@@ -73,18 +73,6 @@ func (server *HLS_Encoder_Server) Start() {
 	}
 }
 
-func (server *HLS_Encoder_Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	LogDebug(req.Method + " " + req.RequestURI)
-
-	if req.Method == "PUT" {
-		w.WriteHeader(200)
-		return
-	}
-
-	w.WriteHeader(200)
-	fmt.Fprintf(w, "HLS encoding server - Version "+VERSION)
-}
-
 // Kills every single active task
 // Run only if the connection to the coordinator server is lost
 func (server *HLS_Encoder_Server) KillAllActiveTasks() {

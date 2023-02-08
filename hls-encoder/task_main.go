@@ -105,11 +105,3 @@ func (task *EncodingTask) Kill() {
 		task.process.Kill()
 	}
 }
-
-func (task *EncodingTask) log(str string) {
-	LogTaskStatus(task.channel, task.streamId, str)
-}
-
-func (task *EncodingTask) debug(str string) {
-	LogDebugTask(task.channel, task.streamId, str)
-}
