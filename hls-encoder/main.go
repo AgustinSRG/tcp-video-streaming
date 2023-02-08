@@ -19,6 +19,8 @@ func main() {
 
 	InitLog()
 
+	InitFileStorage()
+
 	LogInfo("Started HLS encoder worker - Version " + VERSION)
 
 	err := child_process_manager.InitalizeChildProcessManager()
