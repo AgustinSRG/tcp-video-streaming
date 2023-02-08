@@ -87,8 +87,9 @@ type HLS_PlayList struct {
 
 // Stores HLS fragment metadata
 type HLS_Fragment struct {
-	Index    int     // Fragment index
-	Duration float64 // Fragment duration
+	Index        int     // Fragment index
+	Duration     float64 // Fragment duration
+	FragmentName string  // Fragment file name
 }
 
 // Encodes playlist to M3U8
@@ -105,7 +106,7 @@ func (playlist *HLS_PlayList) Encode() string {
 
 	for i := 0; i < len(playlist.fragments); i++ {
 		result += "#EXTINF:" + fmt.Sprintf("%0.6f", playlist.fragments[i].Duration) + "," + "\n"
-		result += fmt.Sprint(playlist.fragments[i].Index) + ".ts" + "\n"
+		result += playlist.fragments[i].FragmentName + "\n"
 	}
 
 	if playlist.IsEnded {
@@ -168,12 +169,13 @@ func DecodeHLSPlayList(m3u8 string) *HLS_PlayList {
 				result.MediaSequence = ms
 			}
 		case "#EXTINF":
-			d, err := strconv.ParseFloat(parts[1], 64)
+			d, err := strconv.ParseFloat(strings.TrimSuffix(parts[1], ","), 64)
 
-			if err != nil && d > 0 {
+			if err != nil && d > 0 && i < (len(lines)-1) {
 				frag := HLS_Fragment{
-					Index:    len(result.fragments) + result.MediaSequence,
-					Duration: d,
+					Index:        len(result.fragments) + result.MediaSequence,
+					Duration:     d,
+					FragmentName: strings.TrimSpace(lines[i+1]),
 				}
 
 				result.fragments = append(result.fragments, frag)
