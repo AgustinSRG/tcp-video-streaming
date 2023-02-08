@@ -22,6 +22,11 @@ type HLS_Encoder_Server struct {
 
 	loopBackPort int // Port of the loopback HTTP listener (randomly chosen)
 
+	hlsTargetDuration     int // Duration of fragments (seconds)
+	hlsLivePlayListSize   int // Max size of a live playlist
+	hlsVODPlaylistMaxSize int // Max size of a VOD playlist
+	hlsMaxFragmentCount   int // Max fragments allowed per stream
+
 	tasks map[string]*EncodingTask // List of active encoding tasks. Map (channel:streamId) -> Task
 }
 
@@ -40,6 +45,11 @@ func (server *HLS_Encoder_Server) Initialize() {
 			server.capacity = cap
 		}
 	}
+
+	server.hlsTargetDuration = GetConfiguredHLSTime()
+	server.hlsLivePlayListSize = GetConfiguredHLSPlaylistSize()
+	server.hlsVODPlaylistMaxSize = GetConfiguredHLSVideoOnDemandMaxSize()
+	server.hlsMaxFragmentCount = GetConfiguredMaxHLSFragmentCount()
 
 	server.tasks = make(map[string]*EncodingTask)
 
@@ -119,6 +129,7 @@ func (server *HLS_Encoder_Server) CreateTask(channel string, streamId string, so
 		record:                      record,
 		previews:                    previews,
 		killed:                      false,
+		hasStarted:                  false,
 		mutex:                       &sync.Mutex{},
 		process:                     nil,
 		subStreams:                  make(map[string]*SubStreamStatus),

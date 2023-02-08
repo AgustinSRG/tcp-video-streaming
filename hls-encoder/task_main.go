@@ -54,6 +54,7 @@ func (task *EncodingTask) Run() {
 	task.debug("Command to be run: " + strings.Join(cmd.Args, " "))
 
 	process, err := RunFFMpegCommandAsync(cmd, func(time float64, frames uint64) {
+		task.OnEncodingProgress()
 		task.debug("[FFMPEG-P] TIME=" + fmt.Sprint(time) + ", FRAMES=" + fmt.Sprint(frames))
 	})
 
@@ -92,6 +93,8 @@ func (task *EncodingTask) Run() {
 	}
 
 	task.debug("FFMPEG ended with state: " + state.String())
+
+	task.OnEncodingEnded()
 }
 
 // Kills the task
@@ -101,7 +104,7 @@ func (task *EncodingTask) Kill() {
 
 	task.killed = true
 
-	if task.process != nil {
+	if task.process != nil && !task.hasStarted {
 		task.process.Kill()
 	}
 }

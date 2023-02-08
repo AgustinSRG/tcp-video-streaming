@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	HLS_INTERNAL_PLAYLIST_SIZE = 5
-	HLS_DEFAULT_PLAYLIST_SIZE  = 10
-	HLS_DEFAULT_SEGMENT_TIME   = 3
+	HLS_INTERNAL_PLAYLIST_SIZE  = 5
+	HLS_DEFAULT_PLAYLIST_SIZE   = 10
+	HLS_DEFAULT_SEGMENT_TIME    = 3
+	DEFAULT_VOD_FRAGMENTS_LIMIT = 86400    // Max number of fragments allowed in a VOD playlist
+	DEFAULT_FRAGMENTS_LIMIT     = 16777216 // Default limit of fragments for a single stream
 )
 
 // Returns the configured HLS segment time
@@ -48,6 +50,38 @@ func GetConfiguredHLSPlaylistSize() int {
 	}
 }
 
+// Get the max number of fragments to include in a single VOD playlist
+func GetConfiguredHLSVideoOnDemandMaxSize() int {
+	c := os.Getenv("HLS_VOD_MAX_SIZE")
+	if c != "" {
+		t, err := strconv.ParseInt(c, 10, 32)
+
+		if err != nil || t <= 0 {
+			return DEFAULT_VOD_FRAGMENTS_LIMIT
+		}
+
+		return int(t)
+	} else {
+		return DEFAULT_VOD_FRAGMENTS_LIMIT
+	}
+}
+
+// Gets the max number of fragments allowed in a single stream
+func GetConfiguredMaxHLSFragmentCount() int {
+	c := os.Getenv("HLS_FRAGMENT_COUNT_LIMIT")
+	if c != "" {
+		t, err := strconv.ParseInt(c, 10, 32)
+
+		if err != nil || t <= 0 {
+			return DEFAULT_FRAGMENTS_LIMIT
+		}
+
+		return int(t)
+	} else {
+		return DEFAULT_FRAGMENTS_LIMIT
+	}
+}
+
 // Appends HLS arguments to the encoder command
 // cmd - The command
 // resolution - The resolution
@@ -61,7 +95,7 @@ func AppendGenericHLSArguments(cmd *exec.Cmd, resolution Resolution, task *Encod
 
 	// Set HLS options
 	cmd.Args = append(cmd.Args, "-hls_list_size", fmt.Sprint(HLS_INTERNAL_PLAYLIST_SIZE))
-	cmd.Args = append(cmd.Args, "-hls_time", fmt.Sprint(GetConfiguredHLSPlaylistSize()))
+	cmd.Args = append(cmd.Args, "-hls_time", fmt.Sprint(task.server.hlsTargetDuration))
 
 	// Method and URL
 	cmd.Args = append(cmd.Args, "-method", "PUT")
@@ -70,8 +104,7 @@ func AppendGenericHLSArguments(cmd *exec.Cmd, resolution Resolution, task *Encod
 }
 
 const (
-	M3U8_DEFAULT_VERSION     = 3
-	HARD_HLS_FRAGMENTS_LIMIT = 86400 // Max number of fragments allowed in a playlist due to format limitations
+	M3U8_DEFAULT_VERSION = 3
 )
 
 // Stores a HLS playlist

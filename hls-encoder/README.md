@@ -52,6 +52,8 @@ Additional configuration for HLS
 | ---------------------- | ----------------------------------------------------------------- |
 | HLS_TIME_SECONDS       | Duration (seconds) of each video fragment (by default 3 seconds). |
 | HLS_LIVE_PLAYLIST_SIZE | Max number of fragments in the live playlist (10 by default)      |
+| HLS_VOD_MAX_SIZE | Max number of fragments to include in a single VOD playlist. Default value: `86400` |
+| HLS_FRAGMENT_COUNT_LIMIT | Max number of fragments to allow in a single stream. After this limit is reached, the stream kill be closed. Default value: `16777216` |
 
 ### More options
 

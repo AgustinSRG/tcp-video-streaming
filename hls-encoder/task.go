@@ -3,7 +3,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"sync"
 )
@@ -27,6 +26,8 @@ type EncodingTask struct {
 	mutex *sync.Mutex // Mutex to access the status data
 
 	process *os.Process // Encoding process reference
+
+	hasStarted bool // True if the encoding started
 
 	killed bool // True if the task was killed
 
@@ -53,14 +54,22 @@ type SubStreamStatus struct {
 
 	livePlaylist          *HLS_PlayList // Live playlist
 	livePlaylistAvailable bool          // True if live playlist is available
+	liveWriting           bool          // True if the live playlist is being written
+	liveWritePending      bool          // True if the live playlist is pending of being written
+	liveWriteData         []byte        // Data to write to the live playlist
 
 	vodPlaylist          *HLS_PlayList // VOD playlist
 	vodPlaylistAvailable bool          // True if the current VOD playlist is available
 	vodIndex             int           // VOD index
+	vodWriting           bool          // True if the vod playlist is being written
+	vodWritePending      bool          // True if the vod playlist is pending of being written
+	vodWriteData         []byte        // Data to write to the vod playlist
 
-	fragmentCount int // Total number of fragments parsed and appended to the playlists
+	fragmentCount         int // Total number of fragments parsed and appended to the playlists
+	removedFragmentsCount int // Number of removed fragments
 
-	fragmentsReady map[int]bool // Map to check when fragments are ready
+	fragments      map[int]*HLS_Fragment // List of fragments extracted from the M3U8 file
+	fragmentsReady map[int]bool          // Map to check when fragments are ready
 }
 
 // Logs a message for the task
@@ -73,112 +82,40 @@ func (task *EncodingTask) debug(str string) {
 	LogDebugTask(task.channel, task.streamId, str)
 }
 
-func (task *EncodingTask) OnFragmentReady(resolution Resolution, fragmentIndex int) {
-	task.mutex.Lock()
-	defer task.mutex.Unlock()
-}
-
-func (task *EncodingTask) OnPlaylistUpdate(resolution Resolution, playlist *HLS_PlayList) {
-	task.mutex.Lock()
-	defer task.mutex.Unlock()
-}
-
-func (task *EncodingTask) OnPreviewImageReady(previewIndex int) {
+// Call when encoding progress is made
+func (task *EncodingTask) OnEncodingProgress() {
 	task.mutex.Lock()
 	defer task.mutex.Unlock()
 
-	if previewIndex < task.previewsCount {
-		return // Ignore already added images
-	}
-
-	task.previewsReady[previewIndex] = true
-
-	oldCount := task.previewsCount
-	newCount := oldCount
-	doneCounting := false
-
-	for !doneCounting {
-		if task.previewsReady[newCount+1] {
-			delete(task.previewsReady, newCount+1)
-			newCount++
-		} else {
-			doneCounting = true
-		}
-	}
-
-	if oldCount != newCount {
-		// Update new count
-		task.previewsCount = newCount
-
-		// Update index file
-		newIndexFile := PreviewsIndexFile{
-			IndexStart: 0,
-			Count:      newCount,
-			Pattern:    "%d.jpg",
-		}
-
-		data, err := json.Marshal(newIndexFile)
-
-		if err != nil {
-			LogError(err)
-			return
-		}
-
-		task.writingPreviewsIndex = true
-		go task.SaveImagePreviewsIndex(data)
-	}
+	task.hasStarted = true
 }
 
-// Call after the image previews index is successfully saved
-func (task *EncodingTask) OnImagePreviewsIndexSaved() {
-	shouldAnnounce := false
+// Call after the encoding process ended
+func (task *EncodingTask) OnEncodingEnded() {
 	task.mutex.Lock()
+	defer task.mutex.Unlock()
 
-	if !task.previewsAvailable {
-		task.previewsAvailable = true
-		shouldAnnounce = true
+	if !task.hasStarted {
+		return
 	}
 
-	task.mutex.Unlock()
+	// For each resolution, set the live playlist to ended and save it
 
-	if shouldAnnounce {
-		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "IMG-PREVIEW", Resolution{
-			width:  task.previews.width,
-			height: task.previews.height,
-			fps:    task.previews.delaySeconds},
-			"img-preview/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/index.json",
-		)
-	}
-}
-
-// Saves image previews index
-// data - Contents of the index file
-func (task *EncodingTask) SaveImagePreviewsIndex(data []byte) {
-	filePath := "img-preview/" + task.channel + "/" + task.streamId + "/" + task.previews.Encode("-") + "/index.json"
-	done := false
-
-	dataToWrite := data
-
-	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
-
-		if err != nil {
-			LogError(err)
-		} else {
-			task.OnImagePreviewsIndexSaved()
+	for _, subStream := range task.subStreams {
+		if subStream.livePlaylist == nil {
+			continue
 		}
 
-		task.mutex.Lock()
+		subStream.livePlaylist.IsEnded = true
 
-		if task.pendingWritePreviewsIndex {
-			task.pendingWritePreviewsIndex = false
-			dataToWrite = task.pendingPreviewsIndexContent
-			task.pendingPreviewsIndexContent = nil
+		livePlayListData := []byte(subStream.livePlaylist.Encode())
+
+		if subStream.liveWriting {
+			subStream.liveWritePending = true
+			subStream.liveWriteData = livePlayListData
 		} else {
-			task.writingPreviewsIndex = false
-			done = true
+			subStream.liveWriting = true
+			go task.SaveLivePlaylist(subStream, livePlayListData)
 		}
-
-		task.mutex.Unlock()
 	}
 }
