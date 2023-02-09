@@ -23,6 +23,7 @@ func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 			vodWriting:            false,
 			vodWritePending:       false,
 			vodWriteData:          nil,
+			vodFragmentBuffer:     make([]HLS_Fragment, 0),
 			fragmentCount:         0,
 			removedFragmentsCount: 0,
 			fragments:             make(map[int]*HLS_Fragment),
@@ -146,7 +147,10 @@ func (task *EncodingTask) updateHLSInternal(subStream *SubStreamStatus) {
 
 	// Update VOD playlist
 	if task.record {
-		// TODO
+		// Push fragments into the buffer
+		subStream.vodFragmentBuffer = append(subStream.vodFragmentBuffer, newFragments...)
+		// Update playlist
+		task.updateVODInternal(subStream)
 	} else {
 		// Record is disabled, remove old fragments
 
@@ -165,6 +169,67 @@ func (task *EncodingTask) updateHLSInternal(subStream *SubStreamStatus) {
 		task.killed = true
 		if task.process != nil {
 			task.process.Kill()
+		}
+	}
+}
+
+// Updates the VOD playlist
+// subStream - Reference to the sub-stream
+func (task *EncodingTask) updateVODInternal(subStream *SubStreamStatus) {
+	if len(subStream.vodFragmentBuffer) == 0 {
+		return // Empty buffer
+	}
+
+	if subStream.vodPlaylist == nil {
+		subStream.vodPlaylist = &HLS_PlayList{
+			Version:        M3U8_DEFAULT_VERSION,
+			TargetDuration: task.server.hlsTargetDuration,
+			MediaSequence:  0,
+			IsVOD:          true,
+			IsEnded:        true,
+			fragments:      make([]HLS_Fragment, 0),
+		}
+	}
+
+	playlistHasChanged := false
+
+	if len(subStream.vodPlaylist.fragments) >= task.server.hlsVODPlaylistMaxSize {
+		if subStream.vodWriting {
+			return
+		}
+
+		// Create new VOD playlist, the old one reached it's limit
+
+		subStream.vodIndex++
+		subStream.vodPlaylist = &HLS_PlayList{
+			Version:        M3U8_DEFAULT_VERSION,
+			TargetDuration: task.server.hlsTargetDuration,
+			MediaSequence:  0,
+			IsVOD:          true,
+			IsEnded:        true,
+			fragments:      make([]HLS_Fragment, 0),
+		}
+		subStream.vodPlaylistAvailable = false
+	}
+
+	for len(subStream.vodFragmentBuffer) > 0 && len(subStream.vodPlaylist.fragments) < task.server.hlsVODPlaylistMaxSize {
+		// Append fragment
+		subStream.vodPlaylist.fragments = append(subStream.vodPlaylist.fragments, subStream.vodFragmentBuffer[0])
+		playlistHasChanged = true
+		// Remove fragment from buffer
+		subStream.vodFragmentBuffer = subStream.vodFragmentBuffer[1:]
+	}
+
+	if playlistHasChanged {
+		// If changed, save the VOD playlist
+		playlistData := []byte(subStream.vodPlaylist.Encode())
+
+		if subStream.vodWriting {
+			subStream.vodWritePending = true
+			subStream.vodWriteData = playlistData
+		} else {
+			subStream.vodWriting = true
+			go task.SaveVODPlaylist(subStream, playlistData)
 		}
 	}
 }
@@ -235,5 +300,62 @@ func (task *EncodingTask) RemoveFragments(subStream *SubStreamStatus, fromIndex 
 		} else {
 			task.debug("Removed file: " + filePath)
 		}
+	}
+}
+
+// Saves VOD playlist
+// subStream - Reference to the sub-stream
+// data - Data to write
+func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byte) {
+	filePath := "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/vod-" + fmt.Sprint(subStream.vodIndex) + ".m3u8"
+	done := false
+
+	dataToWrite := data
+
+	for !done {
+		err := WriteFileBytes(filePath, dataToWrite)
+
+		if err != nil {
+			LogError(err)
+		} else {
+			task.OnVODPlaylistSaved(subStream)
+		}
+
+		task.mutex.Lock()
+
+		if subStream.vodWritePending {
+			subStream.vodWritePending = false
+			dataToWrite = subStream.vodWriteData
+			subStream.vodWriteData = nil
+		} else {
+			subStream.vodWriting = false
+			done = true
+
+			task.updateVODInternal(subStream)
+		}
+
+		task.mutex.Unlock()
+	}
+}
+
+// Call after the VOD playlist is saved successfully
+// subStream - Reference to the sub-stream
+func (task *EncodingTask) OnVODPlaylistSaved(subStream *SubStreamStatus) {
+	shouldAnnounce := false
+	indexToAnnounce := 0
+	task.mutex.Lock()
+
+	if !subStream.vodPlaylistAvailable {
+		subStream.vodPlaylistAvailable = true
+		shouldAnnounce = true
+		indexToAnnounce = subStream.vodIndex
+	}
+
+	task.mutex.Unlock()
+
+	if shouldAnnounce {
+		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-VOD", subStream.resolution,
+			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/vod-"+fmt.Sprint(indexToAnnounce)+".m3u8",
+		)
 	}
 }

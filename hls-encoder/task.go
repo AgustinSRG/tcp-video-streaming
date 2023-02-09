@@ -58,12 +58,13 @@ type SubStreamStatus struct {
 	liveWritePending      bool          // True if the live playlist is pending of being written
 	liveWriteData         []byte        // Data to write to the live playlist
 
-	vodPlaylist          *HLS_PlayList // VOD playlist
-	vodPlaylistAvailable bool          // True if the current VOD playlist is available
-	vodIndex             int           // VOD index
-	vodWriting           bool          // True if the vod playlist is being written
-	vodWritePending      bool          // True if the vod playlist is pending of being written
-	vodWriteData         []byte        // Data to write to the vod playlist
+	vodPlaylist          *HLS_PlayList  // VOD playlist
+	vodPlaylistAvailable bool           // True if the current VOD playlist is available
+	vodIndex             int            // VOD index
+	vodWriting           bool           // True if the vod playlist is being written
+	vodWritePending      bool           // True if the vod playlist is pending of being written
+	vodWriteData         []byte         // Data to write to the vod playlist
+	vodFragmentBuffer    []HLS_Fragment // Buffer to temporally store the fragments before pushing them to the VOD playlists
 
 	fragmentCount         int // Total number of fragments parsed and appended to the playlists
 	removedFragmentsCount int // Number of removed fragments
