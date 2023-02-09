@@ -2,6 +2,8 @@
 
 package main
 
+import "fmt"
+
 // Gets or create the sub stream object for the specified resolution
 // resolution - Stream video resolution
 // Returns a reference to the sub-stream
@@ -151,7 +153,7 @@ func (task *EncodingTask) updateHLSInternal(subStream *SubStreamStatus) {
 		newRemovedFragmentCount := subStream.fragmentCount - (2 * task.server.hlsLivePlayListSize)
 
 		if subStream.removedFragmentsCount < newRemovedFragmentCount {
-			// TODO
+			go task.RemoveFragments(subStream, subStream.removedFragmentsCount, newRemovedFragmentCount)
 			subStream.removedFragmentsCount = newRemovedFragmentCount
 		}
 	}
@@ -217,5 +219,21 @@ func (task *EncodingTask) OnLivePlaylistSaved(subStream *SubStreamStatus) {
 		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-LIVE", subStream.resolution,
 			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8",
 		)
+	}
+}
+
+// Removes TS fragments
+// subStream - The sub-stream reference
+// fromIndex - Start of the range (Inclusive)
+// toIndex - End of the range (exclusive)
+func (task *EncodingTask) RemoveFragments(subStream *SubStreamStatus, fromIndex int, toIndex int) {
+	for i := fromIndex; i < toIndex; i++ {
+		filePath := "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/" + fmt.Sprint(i) + ".ts"
+		err := RemoveFile(filePath)
+		if err != nil {
+			task.debug("Could not remove file: " + filePath + " | Error: " + err.Error())
+		} else {
+			task.debug("Removed file: " + filePath)
+		}
 	}
 }

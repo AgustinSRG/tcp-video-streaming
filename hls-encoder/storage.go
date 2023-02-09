@@ -113,3 +113,15 @@ func WriteFileBytes(subPath string, data []byte) error {
 
 	return nil
 }
+
+// Removes a file from the HLS storage
+// subPath - The path inside the file system
+func RemoveFile(subPath string) error {
+	if strings.HasPrefix(subPath, "/") || strings.Contains(subPath, "..") {
+		return errors.New("Insecure path. Cannot write the file.")
+	}
+
+	absolutePath := filepath.Join(FILE_STORAGE_BASE_PATH, subPath)
+
+	return os.Remove(absolutePath)
+}
