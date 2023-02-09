@@ -155,6 +155,16 @@ func (task *EncodingTask) updateHLSInternal(subStream *SubStreamStatus) {
 			subStream.removedFragmentsCount = newRemovedFragmentCount
 		}
 	}
+
+	// Check fragments limit
+
+	if subStream.fragmentCount >= task.server.hlsMaxFragmentCount {
+		// Limit reached, kill process
+		task.killed = true
+		if task.process != nil {
+			task.process.Kill()
+		}
+	}
 }
 
 // Saves live playlist
