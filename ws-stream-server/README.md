@@ -60,8 +60,7 @@ Here is a list with more options you can configure:
 | Variable Name                 | Description                                                                                                                        |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP_PORT                     | HTTP listening port. Default is `80`                                                                                               |
-| BIND_ADDRESS                  | Bind address for RTMP and RTMPS. By default it binds to all network interfaces.                                                    |
-| RTMP_CHUNK_SIZE               | RTMP Chunk size in bytes. Default is `128`                                                                                         |
+| BIND_ADDRESS                  | Bind address for HTTP and HTTPS. By default it binds to all network interfaces.                                                    |
 | LOG_REQUESTS                  | Set to `YES` or `NO`. By default is `YES`                                                                                          |
 | LOG_DEBUG                     | Set to `YES` or `NO`. By default is `NO`                                                                                           |
 | ID_MAX_LENGTH                 | Max length for `CHANNEL` and `KEY`. By default is 128 characters                                                                   |
