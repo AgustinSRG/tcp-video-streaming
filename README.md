@@ -50,7 +50,7 @@ Also check the README of every component for component-specific documentation.
 
 ## Testing
 
- - TODO
+You can locally test the tools with Docker using the [Streaming Test Application](./test-app/), provided in this repository.
 
 ## License
 
