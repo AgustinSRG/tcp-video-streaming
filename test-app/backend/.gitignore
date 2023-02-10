@@ -1,0 +1,5 @@
+backend
+backend.exe
+.env
+*.tmp
+database.json
