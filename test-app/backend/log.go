@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -42,9 +43,9 @@ func LogErrorMessage(err string) {
 	LogLine("[ERROR] " + err)
 }
 
-func LogRequest(session_id uint64, ip string, line string) {
+func LogRequest(r *http.Request) {
 	if LOG_REQUESTS_ENABLED {
-		LogLine("[REQUEST] (" + ip + ") " + line)
+		LogLine("[REQUEST] (From: " + GetClientIP(r) + ") " + r.Method + " " + r.URL.Path)
 	}
 }
 

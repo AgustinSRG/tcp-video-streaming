@@ -32,10 +32,11 @@ In order to run the server, run the binary without arguments.
 
 You can configure the server with environment variables.
 
-| Variable Name           | Description                                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| HTTP_PORT               | HTTP listening port. Default is `80`                                                          |
-| BIND_ADDRESS            | Bind address for RTMP and RTMPS. By default it binds to all network interfaces.               |
-| FRONTEND_LOCATION       | Path to the frontend, in order to serve it.                                                   |
-| CONTROL_SERVER_BASE_URL | Base URL of the control server, to send commands. Example: `http://localhost:8080`            |
-| DB_PATH                 | Path to store the JSON database. By default it will store it in the current working directory |
+| Variable Name              | Description                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| HTTP_PORT                  | HTTP listening port. Default is `80`                                                          |
+| BIND_ADDRESS               | Bind address for RTMP and RTMPS. By default it binds to all network interfaces.               |
+| FRONTEND_LOCATION          | Path to the frontend, in order to serve it.                                                   |
+| CONTROL_SERVER_BASE_URL    | Base URL of the control server, to send commands. Example: `http://localhost:8080`            |
+| DB_PATH                    | Path to store the JSON database. By default it will store it in the current working directory |
+| CORS_INSECURE_MODE_ENABLED | Set it to `YES` to allow insecure CORS requests (for development purposes)                    |

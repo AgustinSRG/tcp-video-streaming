@@ -1,0 +1,86 @@
+// Utilities
+
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"net"
+	"net/http"
+	"os"
+)
+
+// Returns API standard JSON response
+// response - HTTP response handler
+// request - HTTP request handler
+// result - JSON result
+func ReturnAPI_JSON(response http.ResponseWriter, request *http.Request, result []byte) {
+	hasher := sha256.New()
+	hasher.Write(result)
+	hash := hasher.Sum(nil)
+	etag := hex.EncodeToString(hash)
+
+	response.Header().Set("ETag", etag)
+	response.Header().Add("Cache-Control", "no-cache")
+
+	if request.Header.Get("If-None-Match") == etag {
+		response.WriteHeader(304)
+	} else {
+		response.Header().Add("Content-Type", "application/json")
+		response.WriteHeader(200)
+
+		response.Write(result)
+	}
+}
+
+// API standard error response
+type APIErrorResponse struct {
+	Code    string `json:"code"`    // Error code
+	Message string `json:"message"` // Error message
+}
+
+// Returns API standard error message
+// response - HTTP response handler
+// request - HTTP request handler
+// status - HTTP status
+// code - Error code
+// message - Error message
+func ReturnAPIError(response http.ResponseWriter, status int, code string, message string) {
+	var m APIErrorResponse
+
+	m.Code = code
+	m.Message = message
+
+	jsonRes, err := json.Marshal(m)
+
+	if err != nil {
+		LogError(err)
+		response.Header().Add("Cache-Control", "no-cache")
+		response.WriteHeader(500)
+		return
+	}
+
+	response.Header().Add("Content-Type", "application/json")
+	response.Header().Add("Cache-Control", "no-cache")
+	response.WriteHeader(status)
+	response.Write(jsonRes)
+}
+
+// Gets client IP address
+// request - HTTP request
+func GetClientIP(request *http.Request) string {
+	ip, _, _ := net.SplitHostPort(request.RemoteAddr)
+
+	if os.Getenv("USING_PROXY") == "YES" {
+		forwardedFor := request.Header.Get("X-Forwarded-For")
+
+		if forwardedFor != "" {
+			return forwardedFor
+		} else {
+			return ip
+		}
+	} else {
+		return ip
+	}
+}
