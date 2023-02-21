@@ -50,3 +50,13 @@ In order to test the different kinds of authentication, you can set the followin
  - `Basic` - Basic HTTP authorization. Set `KEY_VERIFICATION_AUTH_USER` and `KEY_VERIFICATION_PASSWORD` environment variables.
  - `Bearer` - Bearer token authentication. Set `KEY_VERIFICATION_AUTH_TOKEN` environment variable.
  - `Custom` - Custom authentication header. Set `KEY_VERIFICATION_AUTH_CUSTOM` environment variable.
+
+### Streaming events handler
+
+This test app provides an event handler callback in the path `/callbacks/events`
+
+In order to test the different kinds of authentication, you can set the following options (Set for the `EVENT_CALLBACK_AUTH` environment variable):
+
+ - `Basic` - Basic HTTP authorization. Set `EVENT_CALLBACK_AUTH_USER` and `EVENT_CALLBACK_PASSWORD` environment variables.
+ - `Bearer` - Bearer token authentication. Set `EVENT_CALLBACK_AUTH_TOKEN` environment variable.
+ - `Custom` - Custom authentication header. Set `EVENT_CALLBACK_AUTH_CUSTOM` environment variable.

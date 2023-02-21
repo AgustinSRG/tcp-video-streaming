@@ -102,6 +102,8 @@ func RunHTTPServer(port string, bindAddr string) {
 
 	// Event callback
 
+	router.HandleFunc("/callbacks/events", callback_eventsHandler).Methods("POST")
+
 	// API routes
 
 	// TODO: Add API routes here
