@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -157,4 +158,22 @@ func (db *StreamingTestAppDatabase) writeToFile(data []byte) {
 
 		db.mutex.Unlock()
 	}
+}
+
+func (db *StreamingTestAppDatabase) VerifyKey(channel string, key string) (valid bool, record bool, previews string, resolutions string) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return false, false, "", ""
+	}
+
+	if subtle.ConstantTimeCompare([]byte(key), []byte(channelData.Key)) != 1 {
+		LogDebug("Invalid key!")
+		return false, false, "", ""
+	}
+
+	return true, channelData.Record, channelData.Previews, channelData.Resolutions
 }

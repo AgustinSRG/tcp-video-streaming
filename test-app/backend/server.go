@@ -96,6 +96,12 @@ func RunHTTPServer(port string, bindAddr string) {
 		router.Use(corsMiddleware)
 	}
 
+	// Key verification API
+
+	router.HandleFunc("/callbacks/key_verification", callback_keyVerification).Methods("POST")
+
+	// Event callback
+
 	// API routes
 
 	// TODO: Add API routes here

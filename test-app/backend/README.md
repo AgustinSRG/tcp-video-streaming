@@ -28,7 +28,7 @@ In order to run the server, run the binary without arguments.
 ./backend
 ```
 
-### Configuration
+## Configuration
 
 You can configure the server with environment variables.
 
@@ -40,3 +40,13 @@ You can configure the server with environment variables.
 | CONTROL_SERVER_BASE_URL    | Base URL of the control server, to send commands. Example: `http://localhost:8080`            |
 | DB_PATH                    | Path to store the JSON database. By default it will store it in the current working directory |
 | CORS_INSECURE_MODE_ENABLED | Set it to `YES` to allow insecure CORS requests (for development purposes)                    |
+
+### Key verification
+
+This test app provides a key verification callback in the path `/callbacks/key_verification`
+
+In order to test the different kinds of authentication, you can set the following options (Set for the `KEY_VERIFICATION_AUTH` environment variable):
+
+ - `Basic` - Basic HTTP authorization. Set `KEY_VERIFICATION_AUTH_USER` and `KEY_VERIFICATION_PASSWORD` environment variables.
+ - `Bearer` - Bearer token authentication. Set `KEY_VERIFICATION_AUTH_TOKEN` environment variable.
+ - `Custom` - Custom authentication header. Set `KEY_VERIFICATION_AUTH_CUSTOM` environment variable.
