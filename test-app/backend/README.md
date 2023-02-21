@@ -60,3 +60,11 @@ In order to test the different kinds of authentication, you can set the followin
  - `Basic` - Basic HTTP authorization. Set `EVENT_CALLBACK_AUTH_USER` and `EVENT_CALLBACK_PASSWORD` environment variables.
  - `Bearer` - Bearer token authentication. Set `EVENT_CALLBACK_AUTH_TOKEN` environment variable.
  - `Custom` - Custom authentication header. Set `EVENT_CALLBACK_AUTH_CUSTOM` environment variable.
+
+### Streaming commands
+
+You must set the authentication method for sending streaming commands to the coordinator. Set for the `STREAMING_COMMANDS_AUTH` environment variable:
+
+ - `Basic` - Basic HTTP authorization. Set `STREAMING_COMMANDS_AUTH_USER` and `STREAMING_COMMANDS_PASSWORD` environment variables.
+ - `Bearer` - Bearer token authentication. Set `STREAMING_COMMANDS_AUTH_TOKEN` environment variable.
+ - `Custom` - Custom authentication header. Set `STREAMING_COMMANDS_AUTH_CUSTOM` environment variable.
