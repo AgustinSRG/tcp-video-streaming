@@ -40,6 +40,7 @@ You can configure the server with environment variables.
 | CONTROL_SERVER_BASE_URL    | Base URL of the control server, to send commands. Example: `http://localhost:8080`            |
 | DB_PATH                    | Path to store the JSON database. By default it will store it in the current working directory |
 | CORS_INSECURE_MODE_ENABLED | Set it to `YES` to allow insecure CORS requests (for development purposes)                    |
+| HLS_FILESYSTEM_PATH        | Path where the HLS files will be stored. It may be a remote or distributed file system.       |
 
 ### Key verification
 
