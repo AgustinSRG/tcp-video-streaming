@@ -41,6 +41,8 @@ You can configure the server with environment variables.
 | DB_PATH                    | Path to store the JSON database. By default it will store it in the current working directory |
 | CORS_INSECURE_MODE_ENABLED | Set it to `YES` to allow insecure CORS requests (for development purposes)                    |
 | HLS_FILESYSTEM_PATH        | Path where the HLS files will be stored. It may be a remote or distributed file system.       |
+| RTMP_BASE_URL              | Base URL of the RTMP server, in order to show to the users for them to publish                |
+| WSS_BASE_URL               | Websocket streaming server base URL, in order to puhlish from the browser                     |
 
 ### Key verification
 

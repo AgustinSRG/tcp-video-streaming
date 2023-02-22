@@ -295,3 +295,156 @@ func (db *StreamingTestAppDatabase) CloseStream(channel string, streamId string)
 
 	return nil
 }
+
+func (db *StreamingTestAppDatabase) CloseAnyStream(channel string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil
+	}
+
+	channelData.Live = false
+	channelData.StreamId = ""
+
+	return nil
+}
+
+func (db *StreamingTestAppDatabase) CreateChannel(channel string, record bool, resolutions ResolutionList, previews PreviewsConfiguration) (*ChannelChangedResponse, bool) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData != nil {
+		return nil, false
+	}
+
+	channelData = &StreamingChannel{
+		Id:                 channel,
+		Key:                generateRandomKey(),
+		Record:             record,
+		Resolutions:        resolutions.Encode(),
+		Previews:           previews.Encode(","),
+		Live:               false,
+		StreamId:           "",
+		LiveStartTimestamp: 0,
+		LiveSubStreams:     make([]SubStream, 0),
+		VODList:            make([]VODStreaming, 0),
+	}
+
+	db.data.Channels[channel] = channelData
+
+	res := ChannelChangedResponse{
+		Id:          channel,
+		Key:         channelData.Key,
+		Record:      record,
+		Resolutions: channelData.Resolutions,
+		Previews:    channelData.Previews,
+	}
+
+	return &res, true
+}
+
+func (db *StreamingTestAppDatabase) UpdateChannel(channel string, record bool, resolutions ResolutionList, previews PreviewsConfiguration) (*ChannelChangedResponse, bool) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil, false
+	}
+
+	channelData.Record = record
+	channelData.Resolutions = resolutions.Encode()
+	channelData.Previews = previews.Encode(",")
+
+	res := ChannelChangedResponse{
+		Id:          channel,
+		Key:         channelData.Key,
+		Record:      record,
+		Resolutions: channelData.Resolutions,
+		Previews:    channelData.Previews,
+	}
+
+	return &res, true
+}
+
+func (db *StreamingTestAppDatabase) RefreshKey(channel string) (*ChannelChangedResponse, bool) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil, false
+	}
+
+	channelData.Key = generateRandomKey()
+
+	res := ChannelChangedResponse{
+		Id:          channel,
+		Key:         channelData.Key,
+		Record:      channelData.Record,
+		Resolutions: channelData.Resolutions,
+		Previews:    channelData.Previews,
+	}
+
+	return &res, true
+}
+
+func (db *StreamingTestAppDatabase) DeleteVOD(channel string, streamId string) bool {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return false
+	}
+
+	if channelData.VODList == nil {
+		return false
+	}
+
+	found := -1
+
+	for i := 0; i < len(channelData.VODList); i++ {
+		if channelData.VODList[i].StreamId == streamId {
+			found = i
+			break
+		}
+	}
+
+	if found == -1 {
+		return false
+	}
+
+	toRemove := channelData.VODList[found]
+
+	channelData.VODList = append(channelData.VODList[:found], channelData.VODList[found+1:]...)
+
+	go RemoveVOD(channel, toRemove)
+
+	return true
+}
+
+func (db *StreamingTestAppDatabase) DeleteChannel(channel string) bool {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return false
+	}
+
+	delete(db.data.Channels, channel)
+
+	go RemoveChannel(channel)
+
+	return true
+}

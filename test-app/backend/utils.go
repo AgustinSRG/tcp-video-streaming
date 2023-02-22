@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +13,8 @@ import (
 	"regexp"
 	"strconv"
 )
+
+const JSON_BODY_MAX_LENGTH = 5 * 1024 * 1024
 
 // Returns API standard JSON response
 // response - HTTP response handler
@@ -113,4 +116,10 @@ func validateStreamIDString(str string) bool {
 	}
 
 	return m
+}
+
+func generateRandomKey() string {
+	keyBytes := make([]byte, 32)
+	rand.Read(keyBytes)
+	return hex.EncodeToString(keyBytes)
 }

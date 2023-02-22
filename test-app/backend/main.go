@@ -15,6 +15,8 @@ func main() {
 
 	LogInfo("Started streaming test backend server")
 
+	InitFileStorage()
+
 	DATABASE = CreateStreamingTestAppDatabase()
 
 	CORS_INSECURE_MODE_ENABLED = os.Getenv("CORS_INSECURE_MODE_ENABLED") == "YES"

@@ -4,7 +4,6 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"path/filepath"
 
 	"github.com/gorilla/mux"
@@ -36,10 +35,9 @@ func hls_servePlaylist(response http.ResponseWriter, request *http.Request) {
 
 	fileName := vars["file"] + ".m3u8"
 
-	basePath := os.Getenv("HLS_FILESYSTEM_PATH")
+	basePath := FILE_STORAGE_BASE_PATH
 
 	if basePath == "" {
-		LogWarning("HLS_FILESYSTEM_PATH is not set.")
 		ReturnAPIError(response, 404, "NOT_FOUND", "File not found.")
 		return
 	}
@@ -77,10 +75,9 @@ func hls_serveFragment(response http.ResponseWriter, request *http.Request) {
 
 	fileName := vars["file"] + ".ts"
 
-	basePath := os.Getenv("HLS_FILESYSTEM_PATH")
+	basePath := FILE_STORAGE_BASE_PATH
 
 	if basePath == "" {
-		LogWarning("HLS_FILESYSTEM_PATH is not set.")
 		ReturnAPIError(response, 404, "NOT_FOUND", "File not found.")
 		return
 	}
@@ -118,10 +115,9 @@ func hls_servePreviewsIndex(response http.ResponseWriter, request *http.Request)
 
 	fileName := vars["file"] + ".json"
 
-	basePath := os.Getenv("HLS_FILESYSTEM_PATH")
+	basePath := FILE_STORAGE_BASE_PATH
 
 	if basePath == "" {
-		LogWarning("HLS_FILESYSTEM_PATH is not set.")
 		ReturnAPIError(response, 404, "NOT_FOUND", "File not found.")
 		return
 	}
@@ -159,10 +155,9 @@ func hls_servePreviewImage(response http.ResponseWriter, request *http.Request) 
 
 	fileName := vars["file"] + ".jpg"
 
-	basePath := os.Getenv("HLS_FILESYSTEM_PATH")
+	basePath := FILE_STORAGE_BASE_PATH
 
 	if basePath == "" {
-		LogWarning("HLS_FILESYSTEM_PATH is not set.")
 		ReturnAPIError(response, 404, "NOT_FOUND", "File not found.")
 		return
 	}
