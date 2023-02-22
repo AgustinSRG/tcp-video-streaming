@@ -104,9 +104,31 @@ func RunHTTPServer(port string, bindAddr string) {
 
 	router.HandleFunc("/callbacks/events", callback_eventsHandler).Methods("POST")
 
-	// API routes
+	// Control API
 
-	// TODO: Add API routes here
+	router.HandleFunc("/api/control", api_getPublishingDetails).Methods("GET")
+
+	router.HandleFunc("/api/control/create", api_createChannel).Methods("POST")
+	router.HandleFunc("/api/control/chan/{channel}/key", api_refreshKey).Methods("POST")
+	router.HandleFunc("/api/control/chan/{channel}/close", api_closeStream).Methods("POST")
+	router.HandleFunc("/api/control/chan/{channel}/vod/{vod}", api_deleteVOD).Methods("DELETE")
+	router.HandleFunc("/api/control/chan/{channel}", api_deleteChannel).Methods("DELETE")
+
+	// Watch API
+
+	router.HandleFunc("/api/watch/{channel}", api_getChannelStatus).Methods("GET")
+	router.HandleFunc("/api/watch/{channel}/vod", api_listVODs).Methods("GET")
+	router.HandleFunc("/api/watch/{channel}/vod/{vod}", api_getVOD).Methods("GET")
+
+	// Serve HLS
+
+	router.HandleFunc("/hls/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.m3u8", hls_servePlaylist).Methods("GET")
+	router.HandleFunc("/hls/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.ts", hls_serveFragment).Methods("GET")
+
+	// Serve image previews
+
+	router.HandleFunc("/img-preview/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.json", hls_servePreviewsIndex).Methods("GET")
+	router.HandleFunc("/img-preview/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.jpg", hls_servePreviewImage).Methods("GET")
 
 	// Static frontend
 
