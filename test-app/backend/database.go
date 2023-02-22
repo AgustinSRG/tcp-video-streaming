@@ -448,3 +448,89 @@ func (db *StreamingTestAppDatabase) DeleteChannel(channel string) bool {
 
 	return true
 }
+
+func (db *StreamingTestAppDatabase) GetChannelStatus(channel string) *ChannelStatusResponse {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil
+	}
+
+	res := ChannelStatusResponse{
+		Id: channel,
+
+		Record:      channelData.Record,
+		Resolutions: channelData.Resolutions,
+		Previews:    channelData.Previews,
+
+		Live:     channelData.Live,
+		StreamId: channelData.StreamId,
+
+		LiveStartTimestamp: channelData.LiveStartTimestamp,
+
+		LiveSubStreams: make([]SubStream, 0),
+	}
+
+	if channelData.LiveSubStreams != nil {
+		res.LiveSubStreams = append(res.LiveSubStreams, channelData.LiveSubStreams...)
+	}
+
+	return &res
+}
+
+func (db *StreamingTestAppDatabase) GetChannelVODList(channel string) []VODItem {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil
+	}
+
+	res := make([]VODItem, 0)
+
+	if channelData.VODList != nil {
+		for i := 0; i < len(channelData.VODList); i++ {
+			res = append(res, VODItem{
+				StreamId:  channelData.VODList[i].StreamId,
+				Timestamp: channelData.VODList[i].Timestamp,
+			})
+		}
+	}
+
+	return res
+}
+
+func (db *StreamingTestAppDatabase) GetChannelVOD(channel string, streamId string) *VODStreaming {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	channelData := db.data.Channels[channel]
+
+	if channelData == nil {
+		return nil
+	}
+
+	if channelData.VODList != nil {
+		for i := 0; i < len(channelData.VODList); i++ {
+			if channelData.VODList[i].StreamId == streamId {
+				if channelData.VODList[i].SubStreams == nil {
+					channelData.VODList[i].SubStreams = make([]SubStream, 0)
+				}
+				return &VODStreaming{
+					StreamId:      channelData.VODList[i].StreamId,
+					Timestamp:     channelData.VODList[i].Timestamp,
+					HasPreviews:   channelData.VODList[i].HasPreviews,
+					PreviewsIndex: channelData.VODList[i].PreviewsIndex,
+					SubStreams:    append(make([]SubStream, 0), channelData.VODList[i].SubStreams...),
+				}
+			}
+		}
+	}
+
+	return nil
+}

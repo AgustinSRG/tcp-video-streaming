@@ -332,6 +332,15 @@ func api_deleteVOD(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	err = DATABASE.Save()
+
+	if err != nil {
+		LogError(err)
+
+		ReturnAPIError(response, 500, "INTERNAL_ERROR", "Internal server error, Check the logs for details.")
+		return
+	}
+
 	response.WriteHeader(200)
 }
 
@@ -365,6 +374,15 @@ func api_deleteChannel(response http.ResponseWriter, request *http.Request) {
 
 	if !success {
 		ReturnAPIError(response, 404, "CHANNEL_NOT_FOUND", "")
+		return
+	}
+
+	err = DATABASE.Save()
+
+	if err != nil {
+		LogError(err)
+
+		ReturnAPIError(response, 500, "INTERNAL_ERROR", "Internal server error, Check the logs for details.")
 		return
 	}
 
