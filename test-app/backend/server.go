@@ -112,8 +112,8 @@ func RunHTTPServer(port string, bindAddr string) {
 	router.HandleFunc("/api/control/chan/{channel}", api_configChannel).Methods("POST")
 	router.HandleFunc("/api/control/chan/{channel}/key", api_refreshKey).Methods("POST")
 	router.HandleFunc("/api/control/chan/{channel}/close", api_closeStream).Methods("POST")
-	router.HandleFunc("/api/control/chan/{channel}/vod/{vod}", api_deleteVOD).Methods("DELETE")
-	router.HandleFunc("/api/control/chan/{channel}", api_deleteChannel).Methods("DELETE")
+	router.HandleFunc("/api/control/chan/{channel}/vod/{vod}/delete", api_deleteVOD).Methods("POST")
+	router.HandleFunc("/api/control/chan/{channel}/delete", api_deleteChannel).Methods("POST")
 
 	// Watch API
 
