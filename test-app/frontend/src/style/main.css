@@ -3,7 +3,11 @@
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+#app {
+    padding: 0.25rem;
 }
 
 .bold {
@@ -28,9 +32,56 @@
 
 a,
 a:visited {
-  color: inherit;
+    color: inherit;
 }
 
 h1 {
     text-align: center;
+}
+
+.form-group {
+    padding-bottom: 0.5rem;
+}
+
+.form-error {
+    color: red;
+    padding-bottom: 0.25rem;
+}
+
+.form-group label {
+    display: block;
+    padding-bottom: 0.2rem;
+}
+
+.btn {
+    padding: 0.5rem;
+}
+
+.form-control {
+    padding: 0.2rem 0.3rem;
+}
+
+
+.channels-list-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.channels-list-container table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.channels-list-container td,
+.channels-list-container th {
+    padding: 0.75rem;
+    vertical-align: top;
+    border-top: 1px solid black;
+    text-align: left;
+}
+
+.channels-list-container thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid black
 }
