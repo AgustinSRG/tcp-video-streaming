@@ -30,3 +30,7 @@ a,
 a:visited {
   color: inherit;
 }
+
+h1 {
+    text-align: center;
+}

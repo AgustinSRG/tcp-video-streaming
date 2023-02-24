@@ -20,8 +20,8 @@ export function parseResolution(str: string): Resolution {
         fps = -1;
     }
     parts = (parts[0] + "").toLowerCase().split("x");
-    let width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : 0;
-    let height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : 0;
+    const width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : 0;
+    const height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : 0;
 
     return {
         width: width,

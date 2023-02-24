@@ -23,12 +23,12 @@ export function parsePreviewsConfiguration(str: string): PreviewsConfiguration {
 
     let parts = str.split(",");
 
-    let delay = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+    const delay = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
 
     parts = (parts[0] + "").trim().split("x");
 
-    let width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : -1;
-    let height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+    const width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : -1;
+    const height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
 
     if (delay <= 0 || width <= 0 || height <= 0) {
         return {

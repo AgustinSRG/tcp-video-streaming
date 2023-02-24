@@ -5,13 +5,10 @@
   </template>
   
   <script lang="ts">
-  import { defineComponent } from "vue";
   
-  export default defineComponent({
-    name: "TopBar",
+  export default {
+    name: "HomeView",
     emits: [],
-    props: {
-    },
     data: function () {
       return {
       };
@@ -20,5 +17,5 @@
     },
     mounted: function () {},
     beforeUnmount: function () {},
-  });
+  };
   </script>

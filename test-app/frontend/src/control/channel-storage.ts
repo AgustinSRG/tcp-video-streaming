@@ -18,7 +18,7 @@ export class ChannelStorage {
         const storageContent = localStorage.getItem(LOCAL_STORAGE_CONTROLLED_CHANNELS_KEY) || "[]";
 
         try {
-            let channels: ControlledChannel[] = JSON.parse(storageContent);
+            const channels: ControlledChannel[] = JSON.parse(storageContent);
 
             if (!Array.isArray(channels)) {
                 return [];
@@ -34,7 +34,7 @@ export class ChannelStorage {
     public static GetChannel(channel: string): ControlledChannel | null {
         const channels = ChannelStorage.GetControlledChannels();
 
-        for (let ch of channels) {
+        for (const ch of channels) {
             if (ch.id === channel) {
                 return ch;
             }
@@ -52,7 +52,7 @@ export class ChannelStorage {
 
         let found = false;
 
-        for (let ch of channels) {
+        for (const ch of channels) {
             if (ch.id === channel.id) {
                 ch.key = channel.key;
                 ch.record = channel.record;
