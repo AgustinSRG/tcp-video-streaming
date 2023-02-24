@@ -37,6 +37,15 @@
       <div class="channel-control-group">
         <h3 v-if="!live">Status: Offline</h3>
         <h3 v-if="live">Status: Live</h3>
+        <div class="form-group" v-if="live">
+          <select class="form-control">
+            <option :value="''">-- Select a quality to play it --</option>
+            <option v-for="ss in liveSubStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }}, {{ ss.fps }} fps</option>
+          </select>
+        </div>
+        <div class="live-preview" v-if="live">
+          <HLSPlayer url=""></HLSPlayer>
+        </div>
       </div>
 
       <div class="channel-control-group">
@@ -58,7 +67,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="r in resolutions">
+                <tr v-for="r in resolutions" :key="r.width + 'x' + r.height + '-' + r.fps">
                   <td>{{ r.width }}x{{ r.height }}</td>
                   <td>{{ r.fps }}</td>
                   <td><button type="button" class="btn btn-danger">Delete</button></td>
@@ -130,6 +139,9 @@ import { parseResolutionList, type Resolution } from "@/utils/resolutions";
 import { Timeouts } from "@/utils/timeout";
 import { defineComponent } from "vue";
 
+import HLSPlayer from "./HLSPlayer.vue";
+import { RouterLink } from 'vue-router';
+
 interface ComponentData {
   found: boolean;
   channelId: string;
@@ -155,6 +167,10 @@ interface ComponentData {
 export default defineComponent({
   name: "StreamingControl",
   emits: [],
+  components: {
+    HLSPlayer,
+    RouterLink,
+  },
   props: {
   },
   data: function (): ComponentData {
@@ -273,7 +289,7 @@ export default defineComponent({
     Request.Abort("load-channel-status-control");
   },
   watch: {
-    $route(to, from) {
+    $route() {
       this.findChannel();
     }
   },

@@ -96,3 +96,19 @@ h1 {
 .channel-control-group {
     width: fit-content;
 }
+
+.hls-player {
+    width: 100%;
+    aspect-ratio: "16:9";
+}
+
+.hls-player video {
+    width: 100%;
+    height: 100%;
+    background-color: black;
+}
+
+.live-preview {
+    width: 720px;
+    max-width: 100%;
+}
