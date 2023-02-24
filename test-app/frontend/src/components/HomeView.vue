@@ -15,9 +15,9 @@
 
     <hr />
 
-    <div class="channels-list-container">
+    <div class="table-container">
       <p v-if="channels.length === 0">You have no streaming channels under your control.</p>
-      <table v-if="channels.length > 0">
+      <table v-if="channels.length > 0" class="table table-full">
         <thead>
           <tr>
             <th>Channel</th>

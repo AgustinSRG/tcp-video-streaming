@@ -57,31 +57,42 @@ h1 {
     padding: 0.5rem;
 }
 
+.btn-margin {
+    margin: 0.25rem;
+}
+
 .form-control {
     padding: 0.2rem 0.3rem;
 }
 
 
-.channels-list-container {
+.table-container {
     overflow-x: auto;
     width: 100%;
 }
 
-.channels-list-container table {
-    width: 100%;
+.table {
     margin-bottom: 1rem;
     border-collapse: collapse;
 }
 
-.channels-list-container td,
-.channels-list-container th {
+.table-full {
+    width: 100%;
+}
+
+.table td,
+.table th {
     padding: 0.75rem;
     vertical-align: top;
     border-top: 1px solid black;
     text-align: left;
 }
 
-.channels-list-container thead th {
+.table thead th {
     vertical-align: bottom;
     border-bottom: 2px solid black
+}
+
+.channel-control-group {
+    width: fit-content;
 }
