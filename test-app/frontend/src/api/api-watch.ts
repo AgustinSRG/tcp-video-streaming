@@ -22,7 +22,7 @@ export interface ChannelStatus {
 
 export interface VODItem {
     streamId: string;
-    timestamp: string;
+    timestamp: number;
 }
 
 export interface VODItemList {

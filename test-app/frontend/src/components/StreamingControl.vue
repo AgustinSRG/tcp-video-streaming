@@ -162,7 +162,6 @@ import { encodePreviewsConfiguration, parsePreviewsConfiguration } from "@/utils
 import { GetAssetURL, Request } from "@/utils/request";
 import { encodeResolutionList, parseResolutionList, type Resolution } from "@/utils/resolutions";
 import { Timeouts } from "@/utils/timeout";
-import { defineComponent } from "vue";
 
 import HLSPlayer from "./HLSPlayer.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
@@ -206,15 +205,13 @@ interface ComponentData {
   channelDangerError: string;
 }
 
-export default defineComponent({
+export default {
   name: "StreamingControl",
   emits: [],
   components: {
     HLSPlayer,
     RouterLink,
     ConfirmationModal,
-  },
-  props: {
   },
   data: function (): ComponentData {
     return {
@@ -616,5 +613,5 @@ export default defineComponent({
       this.findChannel();
     }
   },
-});
+};
 </script>
