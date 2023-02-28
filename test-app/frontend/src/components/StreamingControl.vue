@@ -4,7 +4,8 @@
       <RouterLink to="/">Back to channels list</RouterLink>
     </p>
     <div v-if="found">
-      <h2>#{{ channelId }} -  <RouterLink :to="'/watch/' + channelId" target="_blank">/watch/{{ channelId }}</RouterLink></h2>
+      <h2>#{{ channelId }} - <RouterLink :to="'/watch/' + channelId" target="_blank">/watch/{{ channelId }}</RouterLink>
+      </h2>
       <div class="channel-control-group">
         <h3>RTMP Publishing Details</h3>
         <p v-if="loadingPublishingDetails">Loading...</p>
@@ -40,7 +41,8 @@
         <div class="form-group" v-if="live">
           <select class="form-control">
             <option :value="''">-- Select a quality to play it --</option>
-            <option v-for="ss in liveSubStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }}, {{ ss.fps }} fps</option>
+            <option v-for="ss in liveSubStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }},
+              {{ ss.fps }} fps</option>
           </select>
         </div>
         <div class="live-preview" v-if="live">
@@ -52,7 +54,8 @@
         <h3>Configuration</h3>
 
         <div class="form-group">
-          <label><input type="checkbox" v-model="hasOriginalResolution"> Enable encoding using the original resolution</label>
+          <label><input type="checkbox" v-model="hasOriginalResolution"> Enable encoding using the original
+            resolution</label>
         </div>
 
         <div class="form-group">
@@ -70,12 +73,17 @@
                 <tr v-for="r in resolutions" :key="r.width + 'x' + r.height + '-' + r.fps">
                   <td>{{ r.width }}x{{ r.height }}</td>
                   <td>{{ r.fps }}</td>
-                  <td><button type="button" class="btn btn-danger" :disabled="busy" @click="deleteResolution(r)">Delete</button></td>
+                  <td><button type="button" class="btn btn-danger" :disabled="busy"
+                      @click="deleteResolution(r)">Delete</button></td>
                 </tr>
                 <tr>
-                  <td><input type="number" v-model.number="resToAddWidth" :disabled="busy" placeholder="with (px)" class="form-control"/> x <input type="number" v-model.number="resToAddHeight" :disabled="busy" placeholder="height (px)" class="form-control"/></td>
-                  <td><input type="number" v-model.number="resToAddFps" :disabled="busy" placeholder="fps" class="form-control"/></td>
-                  <td><button type="button" class="btn btn-primary" :disabled="busy" @click="addResolution">Add</button></td>
+                  <td><input type="number" v-model.number="resToAddWidth" :disabled="busy" placeholder="with (px)"
+                      class="form-control" /> x <input type="number" v-model.number="resToAddHeight" :disabled="busy"
+                      placeholder="height (px)" class="form-control" /></td>
+                  <td><input type="number" v-model.number="resToAddFps" :disabled="busy" placeholder="fps"
+                      class="form-control" /></td>
+                  <td><button type="button" class="btn btn-primary" :disabled="busy" @click="addResolution">Add</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -83,38 +91,46 @@
         </div>
 
         <div class="form-group">
-          <label><input type="checkbox" v-model="record" :disabled="busy"> Enable recording (this will generate VODs of the streamings you publish)</label>
+          <label><input type="checkbox" v-model="record" :disabled="busy"> Enable recording (this will generate VODs of
+            the streamings you publish)</label>
         </div>
-        
+
         <div class="form-group" v-if="record">
-          <label><input type="checkbox" v-model="previewsEnabled" :disabled="busy"> Enable preview images generation</label>
+          <label><input type="checkbox" v-model="previewsEnabled" :disabled="busy"> Enable preview images
+            generation</label>
         </div>
 
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews image width:</label>
-          <input type="number" placeholder="with (px)" class="form-control" :disabled="busy" v-model.number="previewsWidth"/>
+          <input type="number" placeholder="with (px)" class="form-control" :disabled="busy"
+            v-model.number="previewsWidth" />
         </div>
 
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews image height:</label>
-          <input type="number" placeholder="height (px)" class="form-control" :disabled="busy" v-model.number="previewsHeight"/>
+          <input type="number" placeholder="height (px)" class="form-control" :disabled="busy"
+            v-model.number="previewsHeight" />
         </div>
-        
+
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews delay(seconds):</label>
-          <input type="number" placeholder="delay (seconds)" class="form-control" :disabled="busy" v-model.number="previewsDelay"/>
+          <input type="number" placeholder="delay (seconds)" class="form-control" :disabled="busy"
+            v-model.number="previewsDelay" />
         </div>
 
         <div class="form-group">
           <div class="form-error" v-if="channelConfigError">{{ channelConfigError }}</div>
-          <button type="button" class="btn btn-primary" @click="updateConfiguration" :disabled="busy">Update channel configuration</button>
+          <button type="button" class="btn btn-primary" @click="updateConfiguration" :disabled="busy">Update channel
+            configuration</button>
         </div>
       </div>
 
       <div class="channel-control-group">
         <h3>Danger zone</h3>
+        <div class="form-error" v-if="channelDangerError">{{ channelDangerError }}</div>
         <div class="form-group">
-          <button type="button" class="btn btn-danger" :disabled="!live || busy" @click="askStop">Stop current active sessions</button>
+          <button type="button" class="btn btn-danger" :disabled="!live || busy" @click="askStop">Stop current active
+            sessions</button>
         </div>
         <div class="form-group">
           <button type="button" class="btn btn-danger" :disabled="busy" @click="askRefresh">Refresh streaming key</button>
@@ -128,9 +144,12 @@
       <h2>Channel not found</h2>
     </div>
 
-    <ConfirmationModal v-model:shown="displayConfirmDelete" message="Delete this channel? (This action is not reversible)" @confirm="doDelete"></ConfirmationModal>
-    <ConfirmationModal v-model:shown="displayConfirmStop" message="Stop active streams?" @confirm="doStop"></ConfirmationModal>
-    <ConfirmationModal v-model:shown="displayConfirmRefresh" message="Refresh streaming key? (The old one will be invalidated)" @confirm="doRefresh"></ConfirmationModal>
+    <ConfirmationModal v-model:shown="displayConfirmDelete" message="Delete this channel? (This action is not reversible)"
+      @confirm="doDelete"></ConfirmationModal>
+    <ConfirmationModal v-model:shown="displayConfirmStop" message="Stop active streams?" @confirm="doStop">
+    </ConfirmationModal>
+    <ConfirmationModal v-model:shown="displayConfirmRefresh"
+      message="Refresh streaming key? (The old one will be invalidated)" @confirm="doRefresh"></ConfirmationModal>
   </div>
 </template>
   
@@ -147,6 +166,7 @@ import { defineComponent } from "vue";
 import HLSPlayer from "./HLSPlayer.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
 import { RouterLink } from 'vue-router';
+import router from "@/router";
 
 interface ComponentData {
   found: boolean;
@@ -180,6 +200,7 @@ interface ComponentData {
   busy: boolean;
 
   channelConfigError: string;
+  channelDangerError: string;
 }
 
 export default defineComponent({
@@ -225,6 +246,7 @@ export default defineComponent({
       busy: false,
 
       channelConfigError: "",
+      channelDangerError: "",
     };
   },
   methods: {
@@ -407,7 +429,51 @@ export default defineComponent({
     },
 
     doDelete: function () {
+      if (this.busy) {
+        return;
+      }
 
+      this.busy = true;
+      this.channelDangerError = "";
+
+      Request.Do(
+        ControlAPI.DeleteChannel(this.channelId, this.channelKey)
+      )
+        .onSuccess(() => {
+          this.busy = false;
+          ChannelStorage.RemoveChannel(this.channelId);
+          router.push('/');
+        })
+        .onCancel(() => {
+          this.busy = false;
+        })
+        .onRequestError((err) => {
+          this.busy = false;
+          Request.ErrorHandler()
+            .add(400, "*", () => {
+              this.channelDangerError = "Bad request";
+            })
+            .add(403, "*", () => {
+              ChannelStorage.RemoveChannel(this.channelId);
+              router.push('/');
+            })
+            .add(404, "*", () => {
+              ChannelStorage.RemoveChannel(this.channelId);
+              router.push('/');
+            })
+            .add(500, "*", () => {
+              this.channelDangerError = "Internal server error";
+            })
+            .add("*", "*", () => {
+              this.channelDangerError = "Could not connect to the server";
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          this.channelDangerError = err.message;
+          console.error(err);
+          this.busy = false;
+        });
     },
 
     askStop: function () {
@@ -415,7 +481,47 @@ export default defineComponent({
     },
 
     doStop: function () {
+      if (this.busy) {
+        return;
+      }
 
+      this.busy = true;
+      this.channelDangerError = "";
+
+      Request.Do(
+        ControlAPI.CloseChannelStream(this.channelId, this.channelKey)
+      )
+        .onSuccess(() => {
+          this.busy = false;
+        })
+        .onCancel(() => {
+          this.busy = false;
+        })
+        .onRequestError((err) => {
+          this.busy = false;
+          Request.ErrorHandler()
+            .add(400, "*", () => {
+              this.channelDangerError = "Bad request";
+            })
+            .add(403, "*", () => {
+              this.channelDangerError = "Access denied. This may indicate the channel was deleted or the key changed.";
+            })
+            .add(404, "*", () => {
+              this.channelDangerError = "Channel not found. This may indicate the channel was deleted.";
+            })
+            .add(500, "*", () => {
+              this.channelDangerError = "Internal server error";
+            })
+            .add("*", "*", () => {
+              this.channelDangerError = "Could not connect to the server";
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          this.channelDangerError = err.message;
+          console.error(err);
+          this.busy = false;
+        });
     },
 
     askRefresh: function () {
@@ -423,7 +529,49 @@ export default defineComponent({
     },
 
     doRefresh: function () {
+      if (this.busy) {
+        return;
+      }
 
+      this.busy = true;
+      this.channelDangerError = "";
+
+      Request.Do(
+        ControlAPI.RefreshChannelKey(this.channelId, this.channelKey)
+      )
+        .onSuccess((result: ChannelChangedResponse) => {
+          this.busy = false;
+          ChannelStorage.SetChannel(result);
+          this.findChannel();
+        })
+        .onCancel(() => {
+          this.busy = false;
+        })
+        .onRequestError((err) => {
+          this.busy = false;
+          Request.ErrorHandler()
+            .add(400, "*", () => {
+              this.channelDangerError = "Bad request";
+            })
+            .add(403, "*", () => {
+              this.channelDangerError = "Access denied. This may indicate the channel was deleted or the key changed.";
+            })
+            .add(404, "*", () => {
+              this.channelDangerError = "Channel not found. This may indicate the channel was deleted.";
+            })
+            .add(500, "*", () => {
+              this.channelDangerError = "Internal server error";
+            })
+            .add("*", "*", () => {
+              this.channelDangerError = "Could not connect to the server";
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          this.channelDangerError = err.message;
+          console.error(err);
+          this.busy = false;
+        });
     },
   },
   mounted: function () {
