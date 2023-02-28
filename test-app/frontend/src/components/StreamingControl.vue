@@ -38,15 +38,16 @@
       <div class="channel-control-group">
         <h3 v-if="!live">Status: Offline</h3>
         <h3 v-if="live">Status: Live</h3>
+        <p v-if="live">Live time: {{ renderTime(liveNow - liveStartTimestamp) }}</p>
         <div class="form-group" v-if="live">
-          <select class="form-control">
+          <select class="form-control" v-model="selectedLiveSubStream">
             <option :value="''">-- Select a quality to play it --</option>
             <option v-for="ss in liveSubStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }},
               {{ ss.fps }} fps</option>
           </select>
         </div>
         <div class="live-preview" v-if="live">
-          <HLSPlayer url=""></HLSPlayer>
+          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)"></HLSPlayer>
         </div>
       </div>
 
@@ -158,7 +159,7 @@ import { ControlAPI, type ChannelChangedResponse, type PublishingDetails } from 
 import { WatchAPI, type ChannelStatus, type SubStream } from "@/api/api-watch";
 import { ChannelStorage } from "@/control/channel-storage";
 import { encodePreviewsConfiguration, parsePreviewsConfiguration } from "@/utils/previews-config";
-import { Request } from "@/utils/request";
+import { GetAssetURL, Request } from "@/utils/request";
 import { encodeResolutionList, parseResolutionList, type Resolution } from "@/utils/resolutions";
 import { Timeouts } from "@/utils/timeout";
 import { defineComponent } from "vue";
@@ -167,6 +168,7 @@ import HLSPlayer from "./HLSPlayer.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
 import { RouterLink } from 'vue-router';
 import router from "@/router";
+import { renderTimeSeconds } from "@/utils/time-utils";
 
 interface ComponentData {
   found: boolean;
@@ -188,6 +190,7 @@ interface ComponentData {
   liveStartTimestamp: number;
   liveNow: number;
   liveSubStreams: SubStream[];
+  selectedLiveSubStream: string,
 
   displayConfirmDelete: boolean;
   displayConfirmStop: boolean;
@@ -238,6 +241,7 @@ export default defineComponent({
       liveStartTimestamp: 0,
       liveSubStreams: [],
       liveNow: Date.now(),
+      selectedLiveSubStream: "",
 
       displayConfirmDelete: false,
       displayConfirmStop: false,
@@ -250,6 +254,24 @@ export default defineComponent({
     };
   },
   methods: {
+    getHLSURL: function (selectedLiveSubStream: string, liveSubStreams: SubStream[]) {
+      for (let ss of liveSubStreams) {
+        if (ss.indexFile === selectedLiveSubStream) {
+          return GetAssetURL("/" + ss.indexFile);
+        }
+      }
+
+      return "";
+    },
+
+    updateNow: function () {
+      this.liveNow = Date.now();
+    },
+
+    renderTime: function (t: number) {
+      return renderTimeSeconds(Math.round(t / 1000))
+    },
+
     findChannel: function () {
       const channel = ChannelStorage.GetChannel(this.$route.params.channel + "");
 
@@ -577,6 +599,8 @@ export default defineComponent({
   mounted: function () {
     this.loadPublishingDetails();
     this.findChannel();
+
+    this.$options.tickTimer = setInterval(this.updateNow.bind(this), 500);
   },
   beforeUnmount: function () {
     Timeouts.Abort("load-publishing-details");
@@ -584,6 +608,8 @@ export default defineComponent({
 
     Timeouts.Abort("load-channel-status-control");
     Request.Abort("load-channel-status-control");
+
+    clearInterval(this.$options.tickTimer);
   },
   watch: {
     $route() {
