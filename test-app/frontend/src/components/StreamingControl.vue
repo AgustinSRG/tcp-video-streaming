@@ -113,19 +113,23 @@
       <div class="channel-control-group">
         <h3>Danger zone</h3>
         <div class="form-group">
-          <button type="button" class="btn btn-danger">Stop current active sessions</button>
+          <button type="button" class="btn btn-danger" :disabled="!live" @click="askStop">Stop current active sessions</button>
         </div>
         <div class="form-group">
-          <button type="button" class="btn btn-danger">Refresh streaming key</button>
+          <button type="button" class="btn btn-danger" @click="askRefresh">Refresh streaming key</button>
         </div>
         <div class="form-group">
-          <button type="button" class="btn btn-danger">Delete Channel</button>
+          <button type="button" class="btn btn-danger" @click="askDelete">Delete Channel</button>
         </div>
       </div>
     </div>
     <div v-if="!found">
       <h2>Channel not found</h2>
     </div>
+
+    <ConfirmationModal v-model:shown="displayConfirmDelete" message="Delete this channel? (This action is not reversible)" @confirm="doDelete"></ConfirmationModal>
+    <ConfirmationModal v-model:shown="displayConfirmStop" message="Stop active streams?" @confirm="doStop"></ConfirmationModal>
+    <ConfirmationModal v-model:shown="displayConfirmRefresh" message="Refresh streaming key? (The old one will be invalidated)" @confirm="doRefresh"></ConfirmationModal>
   </div>
 </template>
   
@@ -140,6 +144,7 @@ import { Timeouts } from "@/utils/timeout";
 import { defineComponent } from "vue";
 
 import HLSPlayer from "./HLSPlayer.vue";
+import ConfirmationModal from "./ConfirmationModal.vue";
 import { RouterLink } from 'vue-router';
 
 interface ComponentData {
@@ -162,6 +167,10 @@ interface ComponentData {
   liveStartTimestamp: number;
   liveNow: number;
   liveSubStreams: SubStream[];
+
+  displayConfirmDelete: boolean;
+  displayConfirmStop: boolean;
+  displayConfirmRefresh: boolean;
 }
 
 export default defineComponent({
@@ -170,6 +179,7 @@ export default defineComponent({
   components: {
     HLSPlayer,
     RouterLink,
+    ConfirmationModal,
   },
   props: {
   },
@@ -194,6 +204,10 @@ export default defineComponent({
       liveStartTimestamp: 0,
       liveSubStreams: [],
       liveNow: Date.now(),
+
+      displayConfirmDelete: false,
+      displayConfirmStop: false,
+      displayConfirmRefresh: false,
     };
   },
   methods: {
@@ -275,6 +289,30 @@ export default defineComponent({
           console.error(err);
           Timeouts.Set("load-channel-status-control", 2000, this.loadChannelStatus.bind(this));
         });
+    },
+
+    askDelete: function () {
+      this.displayConfirmDelete = true;
+    },
+
+    doDelete: function () {
+
+    },
+
+    askStop: function () {
+      this.displayConfirmStop = true;
+    },
+
+    doStop: function () {
+
+    },
+
+    askRefresh: function () {
+      this.displayConfirmRefresh = true;
+    },
+
+    doRefresh: function () {
+
     },
   },
   mounted: function () {

@@ -82,6 +82,7 @@ export default {
       }
 
       this.busy = true;
+      this.channelCreateError = "";
 
       Request.Do(
         ControlAPI.CreateChannel({ id: this.channelIdToCreate, record: false, resolutions: "", previews: "" })
