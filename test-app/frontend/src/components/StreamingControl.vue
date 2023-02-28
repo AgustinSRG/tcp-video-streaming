@@ -70,12 +70,12 @@
                 <tr v-for="r in resolutions" :key="r.width + 'x' + r.height + '-' + r.fps">
                   <td>{{ r.width }}x{{ r.height }}</td>
                   <td>{{ r.fps }}</td>
-                  <td><button type="button" class="btn btn-danger">Delete</button></td>
+                  <td><button type="button" class="btn btn-danger" :disabled="busy" @click="deleteResolution(r)">Delete</button></td>
                 </tr>
                 <tr>
-                  <td><input type="number" placeholder="with (px)" class="form-control"/> x <input type="number" placeholder="height (px)" class="form-control"/></td>
-                  <td><input type="number" placeholder="fps" class="form-control"/></td>
-                  <td><button type="button" class="btn btn-primary">Add</button></td>
+                  <td><input type="number" v-model.number="resToAddWidth" :disabled="busy" placeholder="with (px)" class="form-control"/> x <input type="number" v-model.number="resToAddHeight" :disabled="busy" placeholder="height (px)" class="form-control"/></td>
+                  <td><input type="number" v-model.number="resToAddFps" :disabled="busy" placeholder="fps" class="form-control"/></td>
+                  <td><button type="button" class="btn btn-primary" :disabled="busy" @click="addResolution">Add</button></td>
                 </tr>
               </tbody>
             </table>
@@ -83,43 +83,44 @@
         </div>
 
         <div class="form-group">
-          <label><input type="checkbox" v-model="record"> Enable recording (this will generate VODs of the streamings you publish)</label>
+          <label><input type="checkbox" v-model="record" :disabled="busy"> Enable recording (this will generate VODs of the streamings you publish)</label>
         </div>
         
         <div class="form-group" v-if="record">
-          <label><input type="checkbox" v-model="previewsEnabled"> Enable preview images generation</label>
+          <label><input type="checkbox" v-model="previewsEnabled" :disabled="busy"> Enable preview images generation</label>
         </div>
 
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews image width:</label>
-          <input type="number" placeholder="with (px)" class="form-control" v-model="previewsWidth"/>
+          <input type="number" placeholder="with (px)" class="form-control" :disabled="busy" v-model.number="previewsWidth"/>
         </div>
 
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews image height:</label>
-          <input type="number" placeholder="height (px)" class="form-control" v-model="previewsHeight"/>
+          <input type="number" placeholder="height (px)" class="form-control" :disabled="busy" v-model.number="previewsHeight"/>
         </div>
         
         <div class="form-group" v-if="previewsEnabled">
           <label>Previews delay(seconds):</label>
-          <input type="number" placeholder="delay (seconds)" class="form-control" v-model="previewsDelay"/>
+          <input type="number" placeholder="delay (seconds)" class="form-control" :disabled="busy" v-model.number="previewsDelay"/>
         </div>
 
         <div class="form-group">
-          <button type="button" class="btn btn-primary">Update channel configuration</button>
+          <div class="form-error" v-if="channelConfigError">{{ channelConfigError }}</div>
+          <button type="button" class="btn btn-primary" @click="updateConfiguration" :disabled="busy">Update channel configuration</button>
         </div>
       </div>
 
       <div class="channel-control-group">
         <h3>Danger zone</h3>
         <div class="form-group">
-          <button type="button" class="btn btn-danger" :disabled="!live" @click="askStop">Stop current active sessions</button>
+          <button type="button" class="btn btn-danger" :disabled="!live || busy" @click="askStop">Stop current active sessions</button>
         </div>
         <div class="form-group">
-          <button type="button" class="btn btn-danger" @click="askRefresh">Refresh streaming key</button>
+          <button type="button" class="btn btn-danger" :disabled="busy" @click="askRefresh">Refresh streaming key</button>
         </div>
         <div class="form-group">
-          <button type="button" class="btn btn-danger" @click="askDelete">Delete Channel</button>
+          <button type="button" class="btn btn-danger" :disabled="busy" @click="askDelete">Delete Channel</button>
         </div>
       </div>
     </div>
@@ -134,12 +135,12 @@
 </template>
   
 <script lang="ts">
-import { ControlAPI, type PublishingDetails } from "@/api/api-control";
+import { ControlAPI, type ChannelChangedResponse, type PublishingDetails } from "@/api/api-control";
 import { WatchAPI, type ChannelStatus, type SubStream } from "@/api/api-watch";
 import { ChannelStorage } from "@/control/channel-storage";
-import { parsePreviewsConfiguration } from "@/utils/previews-config";
+import { encodePreviewsConfiguration, parsePreviewsConfiguration } from "@/utils/previews-config";
 import { Request } from "@/utils/request";
-import { parseResolutionList, type Resolution } from "@/utils/resolutions";
+import { encodeResolutionList, parseResolutionList, type Resolution } from "@/utils/resolutions";
 import { Timeouts } from "@/utils/timeout";
 import { defineComponent } from "vue";
 
@@ -171,6 +172,14 @@ interface ComponentData {
   displayConfirmDelete: boolean;
   displayConfirmStop: boolean;
   displayConfirmRefresh: boolean;
+
+  resToAddWidth: number;
+  resToAddHeight: number;
+  resToAddFps: number;
+
+  busy: boolean;
+
+  channelConfigError: string;
 }
 
 export default defineComponent({
@@ -196,6 +205,10 @@ export default defineComponent({
       previewsHeight: 0,
       previewsDelay: 0,
 
+      resToAddWidth: 1024,
+      resToAddHeight: 720,
+      resToAddFps: 30,
+
       rtmpBase: "",
       wssBase: "",
       loadingPublishingDetails: false,
@@ -208,6 +221,10 @@ export default defineComponent({
       displayConfirmDelete: false,
       displayConfirmStop: false,
       displayConfirmRefresh: false,
+
+      busy: false,
+
+      channelConfigError: "",
     };
   },
   methods: {
@@ -288,6 +305,100 @@ export default defineComponent({
         .onUnexpectedError((err) => {
           console.error(err);
           Timeouts.Set("load-channel-status-control", 2000, this.loadChannelStatus.bind(this));
+        });
+    },
+
+    addResolution: function () {
+      const width = this.resToAddWidth;
+      const height = this.resToAddHeight;
+      const fps = this.resToAddFps;
+      const key = width + "x" + height + "-" + fps;
+
+      for (let res of this.resolutions) {
+        const otherKey = res.width + "x" + res.height + "-" + res.fps;
+        if (key === otherKey) {
+          return;
+        }
+      }
+
+      this.resolutions.push({
+        width: width,
+        height: height,
+        fps: fps,
+      });
+    },
+
+    deleteResolution: function (res: Resolution) {
+      const key = res.width + "x" + res.height + "-" + res.fps;
+
+      this.resolutions = this.resolutions.filter(r => {
+        const otherKey = r.width + "x" + r.height + "-" + r.fps;
+        return key !== otherKey;
+      });
+    },
+
+    updateConfiguration: function () {
+      if (this.busy) {
+        return;
+      }
+
+      this.busy = true;
+      this.channelConfigError = "";
+
+      Request.Do(
+        ControlAPI.UpdateChannel(this.channelId, {
+          key: this.channelKey,
+          record: this.record,
+          resolutions: encodeResolutionList({
+            hasOriginal: this.hasOriginalResolution,
+            resolutions: this.resolutions,
+          }),
+          previews: encodePreviewsConfiguration({
+            enabled: this.record && this.previewsEnabled,
+            width: this.previewsWidth,
+            height: this.previewsHeight,
+            delaySeconds: this.previewsDelay,
+          }),
+        })
+      )
+        .onSuccess((result: ChannelChangedResponse) => {
+          this.busy = false;
+          ChannelStorage.SetChannel(result);
+          this.findChannel();
+        })
+        .onCancel(() => {
+          this.busy = false;
+        })
+        .onRequestError((err) => {
+          this.busy = false;
+          Request.ErrorHandler()
+            .add(400, "INVALID_RESOLUTIONS", () => {
+              this.channelConfigError = "The resolutions are invalid. Check they have valid dimensions.";
+            })
+            .add(400, "INVALID_PREVIEWS_CONFIG", () => {
+              this.channelConfigError = "The previews configuration is invalid.";
+            })
+            .add(400, "*", () => {
+              this.channelConfigError = "Bad request";
+            })
+            .add(403, "*", () => {
+              this.channelConfigError = "Access denied. This may indicate the channel was deleted or the key changed.";
+            })
+            .add(404, "*", () => {
+              this.channelConfigError = "Channel not found. This may indicate the channel was deleted.";
+            })
+            .add(500, "*", () => {
+              this.channelConfigError = "Internal server error";
+            })
+            .add("*", "*", () => {
+              this.channelConfigError = "Could not connect to the server";
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          this.channelConfigError = err.message;
+          console.error(err);
+          this.busy = false;
         });
     },
 
