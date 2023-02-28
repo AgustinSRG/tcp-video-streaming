@@ -148,11 +148,11 @@ func (pc *PreviewsConfiguration) Encode() string {
 // Decodes previews configuration from string
 // str - String to parse
 // Returns the configuration params
-func DecodePreviewsConfiguration(str string) PreviewsConfiguration {
-	delayParts := strings.Split(str, ",")
+func DecodePreviewsConfiguration(str string, delimiter string) PreviewsConfiguration {
+	delayParts := strings.Split(str, delimiter)
 
 	if len(delayParts) == 2 {
-		delaySeconds, err := strconv.ParseInt(strings.Trim(delayParts[1], " "), 10, 32)
+		delaySeconds, err := strconv.ParseInt(strings.TrimSpace(delayParts[1]), 10, 32)
 
 		if err != nil || delaySeconds < 1 {
 			return PreviewsConfiguration{
@@ -160,9 +160,9 @@ func DecodePreviewsConfiguration(str string) PreviewsConfiguration {
 			}
 		}
 
-		resParts := strings.Split(strings.Trim(delayParts[0], " "), "x")
+		resParts := strings.Split(strings.TrimSpace(delayParts[0]), "x")
 
-		if len(resParts) != 2 {
+		if len(resParts) == 2 {
 			width, err := strconv.ParseInt(resParts[0], 10, 32)
 
 			if err != nil {

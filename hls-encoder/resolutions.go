@@ -217,7 +217,7 @@ func DecodePreviewsConfiguration(str string, delimiter string) PreviewsConfigura
 	delayParts := strings.Split(str, delimiter)
 
 	if len(delayParts) == 2 {
-		delaySeconds, err := strconv.ParseInt(strings.Trim(delayParts[1], " "), 10, 32)
+		delaySeconds, err := strconv.ParseInt(strings.TrimSpace(delayParts[1]), 10, 32)
 
 		if err != nil || delaySeconds < 1 {
 			return PreviewsConfiguration{
@@ -225,9 +225,9 @@ func DecodePreviewsConfiguration(str string, delimiter string) PreviewsConfigura
 			}
 		}
 
-		resParts := strings.Split(strings.Trim(delayParts[0], " "), "x")
+		resParts := strings.Split(strings.TrimSpace(delayParts[0]), "x")
 
-		if len(resParts) != 2 {
+		if len(resParts) == 2 {
 			width, err := strconv.ParseInt(resParts[0], 10, 32)
 
 			if err != nil {
