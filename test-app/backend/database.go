@@ -143,7 +143,12 @@ func (db *StreamingTestAppDatabase) writeToFile(data []byte) {
 		if err != nil {
 			LogError(err)
 		} else {
-			LogDebug("JSON database saved!")
+			err = os.Rename(tmpPath, fullPath)
+			if err != nil {
+				LogError(err)
+			} else {
+				LogDebug("JSON database saved!")
+			}
 		}
 
 		db.mutex.Lock()
