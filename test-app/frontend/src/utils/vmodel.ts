@@ -1,9 +1,9 @@
 // Custom v-model for composition API
 
-import { computed, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, type ComponentInternalInstance } from 'vue'
 
-export const useVModel = (props, propName) => {
-    const vm = getCurrentInstance().proxy
+export const useVModel = (props: any, propName: string) => {
+    const vm: any = (<ComponentInternalInstance>getCurrentInstance()).proxy
 
     return computed({
         get() {

@@ -6,7 +6,7 @@
 
 <script lang="ts">
 
-import Hls from "hls.js";
+import Hls from "hls.js/dist/hls.min";
 
 export default {
   name: "HLSPlayer",

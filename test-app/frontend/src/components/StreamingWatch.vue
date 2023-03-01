@@ -131,6 +131,7 @@ export default {
 
       this.live = false;
       this.loadChannelStatus();
+      this.loadChannelVODList();
     },
 
     loadChannelStatus: function () {
