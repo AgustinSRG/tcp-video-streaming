@@ -37,6 +37,8 @@ func WriteFile(subPath string, data io.ReadCloser) error {
 
 	absolutePath := filepath.Join(FILE_STORAGE_BASE_PATH, subPath)
 
+	LogDebug("Saving File: " + absolutePath)
+
 	dir := filepath.Dir(absolutePath)
 
 	os.MkdirAll(dir, FOLDER_PERMISSION)
@@ -87,6 +89,8 @@ func WriteFileBytes(subPath string, data []byte) error {
 	}
 
 	absolutePath := filepath.Join(FILE_STORAGE_BASE_PATH, subPath)
+
+	LogDebug("Saving File: " + absolutePath)
 
 	dir := filepath.Dir(absolutePath)
 

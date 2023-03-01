@@ -204,7 +204,7 @@ func DecodeHLSPlayList(m3u8 string) *HLS_PlayList {
 		case "#EXTINF":
 			d, err := strconv.ParseFloat(strings.TrimSuffix(parts[1], ","), 64)
 
-			if err != nil && d > 0 && i < (len(lines)-1) {
+			if err == nil && d > 0 && i < (len(lines)-1) {
 				frag := HLS_Fragment{
 					Index:        len(result.fragments) + result.MediaSequence,
 					Duration:     d,

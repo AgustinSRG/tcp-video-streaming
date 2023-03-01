@@ -100,6 +100,8 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_M3U8(w http.ResponseWriter, r
 
 	playList := DecodeHLSPlayList(string(bodyData))
 
+	LogDebug("Decoded playlist, with " + fmt.Sprint(len(playList.fragments)) + " fragments")
+
 	// Notice task
 
 	task.OnPlaylistUpdate(resolution, playList)
