@@ -479,7 +479,7 @@ func (db *StreamingTestAppDatabase) GetChannelStatus(channel string) *ChannelSta
 		LiveSubStreams: make([]SubStream, 0),
 	}
 
-	if channelData.LiveSubStreams != nil {
+	if res.Live && channelData.LiveSubStreams != nil {
 		res.LiveSubStreams = append(res.LiveSubStreams, channelData.LiveSubStreams...)
 	}
 
