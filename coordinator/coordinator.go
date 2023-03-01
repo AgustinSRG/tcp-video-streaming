@@ -197,7 +197,7 @@ func (coord *Streaming_Coordinator) GenerateStreamID() string {
 
 	coord.nextStreamId++
 
-	binary.LittleEndian.PutUint64(idBytes[9:16], coord.nextStreamId)
+	binary.LittleEndian.PutUint64(idBytes[8:16], coord.nextStreamId)
 
 	coord.mutex.Unlock()
 

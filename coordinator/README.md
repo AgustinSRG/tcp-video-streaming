@@ -34,8 +34,8 @@ The request is a **POST** HTTP request, with an **empty body**, and the followin
 If you require authorization for your API, you can use any of the following options (Set for the `KEY_VERIFICATION_AUTH` environment variable):
 
  - `Basic` - Basic HTTP authorization. Set `KEY_VERIFICATION_AUTH_USER` and `KEY_VERIFICATION_PASSWORD` environment variables.
- - `Bearer` - Bearer token authentication. Set `KEY_VERIFICATION_AUTH_TOKEN` environment variable.
- - `Custom` - Custom authentication header. Set `KEY_VERIFICATION_AUTH_CUSTOM` environment variable.
+ - `Bearer` - Bearer token authorization. Set `KEY_VERIFICATION_AUTH_TOKEN` environment variable.
+ - `Custom` - Custom authorization header. Set `KEY_VERIFICATION_AUTH_CUSTOM` environment variable.
 
 The API must end the request with status code **200** if the key is valid. Any other status code will result in the publishing session to be closed.
 
@@ -64,8 +64,8 @@ The request is a **POST** HTTP request, with an **empty body**, and the followin
 If you require authorization for your API, you can use any of the following options (Set for the `EVENT_CALLBACK_AUTH` environment variable):
 
  - `Basic` - Basic HTTP authorization. Set `EVENT_CALLBACK_AUTH_USER` and `EVENT_CALLBACK_PASSWORD` environment variables.
- - `Bearer` - Bearer token authentication. Set `EVENT_CALLBACK_AUTH_TOKEN` environment variable.
- - `Custom` - Custom authentication header. Set `EVENT_CALLBACK_AUTH_CUSTOM` environment variable.
+ - `Bearer` - Bearer token authorization. Set `EVENT_CALLBACK_AUTH_TOKEN` environment variable.
+ - `Custom` - Custom authorization header. Set `EVENT_CALLBACK_AUTH_CUSTOM` environment variable.
 
 
 The API must end the request with status code **200**. Otherwise the event will be re-sent until it is successfully processed by the application.
@@ -76,7 +76,7 @@ The coordinator implements an API for the application to send commands to.
 
 For the API to require authorization, set the method in the `COMMANDS_API_AUTH`:
  - `Basic` - Basic HTTP authorization. Set `COMMANDS_API_AUTH_USER` and `COMMANDS_API_AUTH_PASSWORD` environment variables.
- - `Bearer` - Bearer token authentication. Set `COMMANDS_API_AUTH_TOKEN` environment variable.
+ - `Bearer` - Bearer token authorization. Set `COMMANDS_API_AUTH_TOKEN` environment variable.
 
 ### Capacity
 

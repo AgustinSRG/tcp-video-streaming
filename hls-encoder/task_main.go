@@ -63,18 +63,22 @@ func (task *EncodingTask) Run() {
 		return
 	}
 
-	err = srcManager.Start()
+	if srcManager != nil {
+		err = srcManager.Start()
 
-	if err != nil {
-		process.Kill()
-		task.log("Error: " + err.Error())
-		return
+		if err != nil {
+			process.Kill()
+			task.log("Error: " + err.Error())
+			return
+		}
 	}
 
 	task.mutex.Lock()
 
 	if task.killed {
-		srcManager.Close()
+		if srcManager != nil {
+			srcManager.Close()
+		}
 		task.mutex.Unlock()
 		return
 	}
@@ -85,7 +89,9 @@ func (task *EncodingTask) Run() {
 
 	state, err := process.Wait()
 
-	srcManager.Close()
+	if srcManager != nil {
+		srcManager.Close()
+	}
 
 	if err != nil {
 		task.log("Error: " + err.Error())

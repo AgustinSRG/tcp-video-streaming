@@ -30,7 +30,8 @@ func checkKeyVerificationAuth(auth string) bool {
 }
 
 func callback_keyVerification(response http.ResponseWriter, request *http.Request) {
-	if !checkKeyVerificationAuth(request.Header.Get("Authentication")) {
+	if !checkKeyVerificationAuth(request.Header.Get("Authorization")) {
+		LogDebug("Invalid authorization: " + request.Header.Get("Authorization"))
 		ReturnAPIError(response, 401, "UNAUTHORIZED", "Invalid authorization.")
 		return
 	}

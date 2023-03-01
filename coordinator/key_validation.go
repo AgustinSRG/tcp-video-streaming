@@ -14,10 +14,11 @@ import (
 // key - The stream key
 // userIP - IP of the publisher
 // Returns:
-//   valid - True only if the key is valid
-//   resolutionList - List of allowed resolutions
-//   record - True if recording is enabled
-//   previewsConfig - Previews configuration
+//
+//	valid - True only if the key is valid
+//	resolutionList - List of allowed resolutions
+//	record - True if recording is enabled
+//	previewsConfig - Previews configuration
 func ValidateStreamKey(channel string, key string, userIP string) (valid bool, resolutionList ResolutionList, record bool, previewsConfig PreviewsConfiguration) {
 	verificationURL := os.Getenv("KEY_VERIFICATION_URL")
 
@@ -69,7 +70,7 @@ func ValidateStreamKey(channel string, key string, userIP string) (valid bool, r
 	}
 
 	if res.StatusCode == 200 {
-		return true, DecodeResolutionsList(res.Header.Get("x-resolutions")), strings.ToLower(res.Header.Get("x-record")) == "true", DecodePreviewsConfiguration(res.Header.Get("x-previews"))
+		return true, DecodeResolutionsList(res.Header.Get("x-resolutions")), strings.ToLower(res.Header.Get("x-record")) == "true", DecodePreviewsConfiguration(res.Header.Get("x-previews"), ",")
 	} else {
 		return false, ResolutionList{}, false, PreviewsConfiguration{}
 	}

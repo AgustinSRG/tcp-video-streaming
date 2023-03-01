@@ -30,7 +30,7 @@ func checkEventsCallbackAuth(auth string) bool {
 }
 
 func callback_eventsHandler(response http.ResponseWriter, request *http.Request) {
-	if !checkEventsCallbackAuth(request.Header.Get("Authentication")) {
+	if !checkEventsCallbackAuth(request.Header.Get("Authorization")) {
 		ReturnAPIError(response, 401, "UNAUTHORIZED", "Invalid authorization.")
 		return
 	}
