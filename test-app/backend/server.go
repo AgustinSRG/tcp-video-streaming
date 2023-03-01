@@ -131,6 +131,11 @@ func RunHTTPServer(port string, bindAddr string) {
 	router.HandleFunc("/img-preview/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.json", hls_servePreviewsIndex).Methods("GET")
 	router.HandleFunc("/img-preview/{channel}/{id}/{resolution}/{file:[0-9a-zA-Z-]+}.jpg", hls_servePreviewImage).Methods("GET")
 
+	// Debug Api
+
+	router.HandleFunc("/api/debug/capacity", api_getDebugCapacity).Methods("GET")
+	router.HandleFunc("/api/debug/report", api_getDebugReport).Methods("GET")
+
 	// Static frontend
 
 	frontend_path := os.Getenv("FRONTEND_PATH")
