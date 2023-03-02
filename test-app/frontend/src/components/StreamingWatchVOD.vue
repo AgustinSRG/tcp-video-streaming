@@ -20,6 +20,7 @@
       <hr />
 
       <p v-if="!hasPreviews">There are no image previews for this VOD.</p>
+      <ImagePreviewsViewer v-if="hasPreviews" :url="getPreviewsURL(previewsIndex)"></ImagePreviewsViewer>
 
       <hr v-if="channelKey" />
 
@@ -42,6 +43,7 @@
 import { WatchAPI, type SubStream, type VODStreaming } from "@/api/api-watch";
 
 import HLSPlayer from "./HLSPlayer.vue";
+import ImagePreviewsViewer from "./ImagePreviewsViewer.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
 import { RouterLink } from 'vue-router';
 import { GetAssetURL, Request } from "@/utils/request";
@@ -79,6 +81,7 @@ export default {
     HLSPlayer,
     RouterLink,
     ConfirmationModal,
+    ImagePreviewsViewer,
   },
   data: function (): ComponentData {
     return {
@@ -111,6 +114,13 @@ export default {
       }
 
       return "";
+    },
+
+    getPreviewsURL: function (index: string): string {
+      if (!index) {
+        return "";
+      }
+      return GetAssetURL("/" + index);
     },
 
     renderTime: function (t: number): string {
