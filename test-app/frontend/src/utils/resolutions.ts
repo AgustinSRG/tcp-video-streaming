@@ -84,3 +84,10 @@ export function encodeResolutionList(rl: ResolutionList): string {
         return rl.resolutions.map(encodeResolution).join(",");
     }
 }
+
+export function getVODIndex(url: string): number {
+    const parts = (url + "").split("/");
+    const fileName = (parts.pop() + "").split(".")[0] + "";
+    const fileIndex = parseInt(fileName.split("-")[1] + "", 10) || 0;
+    return fileIndex;
+}

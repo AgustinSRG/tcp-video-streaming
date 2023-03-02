@@ -7,8 +7,7 @@
         <p >VOD date: {{ renderDate(date) }}</p>
         <div class="form-group">
           <select class="form-control" v-model="selectedSubStream">
-            <option :value="''">-- Select a quality to play it --</option>
-            <option v-for="ss in subStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }},
+            <option v-for="ss in subStreams" :key="ss.indexFile" :value="ss.indexFile">VOD[{{ getVODIndex(ss.indexFile) }}] - {{ ss.width }}x{{ ss.height }},
               {{ ss.fps }} fps</option>
           </select>
         </div>
@@ -52,6 +51,7 @@ import { ChannelStorage } from "@/control/channel-storage";
 import { Timeouts } from "@/utils/timeout";
 import { ControlAPI } from "@/api/api-control";
 import router from "@/router";
+import { getVODIndex } from "@/utils/resolutions";
 
 interface ComponentData {
   found: boolean;
@@ -116,6 +116,10 @@ export default {
       return "";
     },
 
+    getVODIndex: function (index: string): string {
+      return getVODIndex(index) + "";
+    },
+
     getPreviewsURL: function (index: string): string {
       if (!index) {
         return "";
@@ -173,6 +177,15 @@ export default {
           this.hasPreviews = result.hasPreviews;
           this.previewsIndex = result.previewsIndex;
           this.subStreams = result.subStreams.sort((a, b) => {
+            const aIndex = getVODIndex(a.indexFile);
+            const bIndex = getVODIndex(b.indexFile);
+
+            if (aIndex < bIndex) {
+              return -1;
+            } else if (bIndex < aIndex) {
+              return 1;
+            }
+
             const aSize = a.width * a.height;
             const bSize = b.width * b.height;
 
