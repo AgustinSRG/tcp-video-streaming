@@ -17,10 +17,12 @@ const router = createRouter({
     {
       path: '/control/:channel',
       name: 'control',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../components/StreamingControl.vue')
+    },
+    {
+      path: '/watch/:channel/vod/:vod',
+      name: 'watch-vod',
+      component: () => import('../components/StreamingWatchVOD.vue')
     }
   ]
 })

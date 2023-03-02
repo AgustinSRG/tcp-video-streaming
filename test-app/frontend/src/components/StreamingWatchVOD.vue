@@ -1,0 +1,188 @@
+<template>
+  <div class="main-content">
+    <div v-if="found">
+      <h2>Channel: <RouterLink :to="'/watch/' + channelId">#{{ channelId }}</RouterLink></h2>
+      <h3>VOD ID: {{ streamId }}</h3>
+      <div class="channel-watch-group">
+        <p >VOD date: {{ renderDate(date) }}</p>
+        <div class="form-group">
+          <select class="form-control" v-model="selectedSubStream">
+            <option :value="''">-- Select a quality to play it --</option>
+            <option v-for="ss in subStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }},
+              {{ ss.fps }} fps</option>
+          </select>
+        </div>
+        <div class="">
+          <HLSPlayer :url="getHLSURL(selectedSubStream, subStreams)"></HLSPlayer>
+        </div>
+      </div>
+
+      <hr />
+
+      <p v-if="!hasPreviews">There are no image previews for this VOD.</p>
+
+      
+    </div>
+    <div v-if="!found">
+      <h2>VOD not found</h2>
+    </div>
+  </div>
+</template>
+  
+<script lang="ts">
+import { WatchAPI, type SubStream, type VODStreaming } from "@/api/api-watch";
+
+import HLSPlayer from "./HLSPlayer.vue";
+import ConfirmationModal from "./ConfirmationModal.vue";
+import { RouterLink } from 'vue-router';
+import { GetAssetURL, Request } from "@/utils/request";
+import { renderTimeSeconds } from "@/utils/time-utils";
+import { ChannelStorage } from "@/control/channel-storage";
+import { Timeouts } from "@/utils/timeout";
+
+interface ComponentData {
+  found: boolean;
+  channelId: string;
+  channelKey: string;
+
+  streamId: string;
+
+  date: number;
+  subStreams: SubStream[];
+  selectedSubStream: string,
+
+  hasPreviews: boolean,
+  previewsIndex: string,
+}
+
+export default {
+  name: "StreamingWatchVOD",
+  emits: [],
+  components: {
+    HLSPlayer,
+    RouterLink,
+    ConfirmationModal,
+  },
+  data: function (): ComponentData {
+    return {
+      found: false,
+      channelId: "",
+      channelKey: "",
+
+      streamId: "",
+
+      date: 0,
+      subStreams: [],
+      selectedSubStream: "",
+
+      hasPreviews: false,
+      previewsIndex: "",
+    };
+  },
+  methods: {
+    getHLSURL: function (selectedSubStream: string, subStreams: SubStream[]) {
+      for (let ss of subStreams) {
+        if (ss.indexFile === selectedSubStream) {
+          return GetAssetURL("/" + ss.indexFile);
+        }
+      }
+
+      return "";
+    },
+
+    renderTime: function (t: number): string {
+      return renderTimeSeconds(Math.round(t / 1000))
+    },
+
+    renderDate: function (t: number): string {
+      return (new Date(t)).toISOString();
+    },
+
+    autoSelectSubStream: function () {
+      for (let ss of this.subStreams) {
+        if (ss.indexFile === this.selectedSubStream) {
+          return;
+        }
+      }
+
+      if (this.subStreams.length > 0) {
+        this.selectedSubStream = this.subStreams[0].indexFile;
+      } else {
+        this.selectedSubStream = "";
+      }
+    },
+
+    findChannel: function () {
+      const channel = ChannelStorage.GetChannel(this.$route.params.channel + "");
+
+      this.channelId = this.$route.params.channel + "";
+
+      if (!channel) {
+        this.channelKey = "";
+      } else {
+        this.channelKey = channel.key;
+      }
+
+      this.streamId = this.$route.params.vod + "";
+
+      this.loadVOD();
+    },
+
+    loadVOD: function () {
+      Timeouts.Abort("load-vod-info");
+
+      Request.Pending("load-vod-info",
+        WatchAPI.GetChannelVOD(this.channelId, this.streamId)
+      )
+        .onSuccess((result: VODStreaming) => {
+          this.found = true;
+          this.date = result.timestamp;
+          this.hasPreviews = result.hasPreviews;
+          this.previewsIndex = result.previewsIndex;
+          this.subStreams = result.subStreams.sort((a, b) => {
+            const aSize = a.width * a.height;
+            const bSize = b.width * b.height;
+
+            if (aSize > bSize) {
+              return -1;
+            } else if (bSize > aSize) {
+              return 1;
+            } else if (a.fps > b.fps) {
+              return -1;
+            } else {
+              return 1;
+            }
+          });
+          this.autoSelectSubStream();
+        })
+        .onRequestError((err) => {
+          Request.ErrorHandler()
+            .add("404", "*", () => {
+              this.found = false;
+            })
+            .add("*", "*", () => {
+              Timeouts.Set("load-vod-info", 2000, this.loadVOD.bind(this));
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          console.error(err);
+          Timeouts.Set("load-vod-info", 2000, this.loadVOD.bind(this));
+        });
+    },
+
+  },
+  mounted: function () {
+    this.findChannel();
+  },
+  beforeUnmount: function () {
+    Timeouts.Abort("load-vod-info");
+    Request.Abort("load-vod-info");
+  },
+  watch: {
+    $route() {
+      this.findChannel();
+    }
+  },
+};
+</script>

@@ -24,7 +24,7 @@
 
       <p v-if="vods.length > 0">List of available VODs:</p>
       <ul v-if="vods.length > 0">
-        <li v-for="vod in vods">[{{ renderDate(vod.timestamp) }}] <RouterLink to="/">./vod/{{ vod.streamId }}</RouterLink></li>
+        <li v-for="vod in vods">[{{ renderDate(vod.timestamp) }}] <RouterLink :to="'/watch/' + channelId + '/vod/' + vod.streamId">./vod/{{ vod.streamId }}</RouterLink></li>
       </ul>
     </div>
     <div v-if="!found">
