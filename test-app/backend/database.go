@@ -283,9 +283,10 @@ func (db *StreamingTestAppDatabase) AddAvailableStream(channel string, streamId 
 	return nil
 }
 
+const FIXED_MAX_VOD_LIST_LENGTH = 100
+
 func (db *StreamingTestAppDatabase) CloseStream(channel string, streamId string) error {
 	db.mutex.Lock()
-	defer db.mutex.Unlock()
 
 	channelData := db.data.Channels[channel]
 
@@ -296,6 +297,24 @@ func (db *StreamingTestAppDatabase) CloseStream(channel string, streamId string)
 	if channelData.Live && channelData.StreamId == streamId {
 		channelData.Live = false
 		channelData.StreamId = ""
+	}
+
+	// Clear VODs
+
+	vodsToClear := make([]string, 0)
+
+	if channelData.VODList != nil {
+		amountToDelete := len(channelData.VODList) - FIXED_MAX_VOD_LIST_LENGTH
+
+		for i := 0; i < amountToDelete; i++ {
+			vodsToClear = append(vodsToClear, channelData.VODList[i].StreamId)
+		}
+	}
+
+	db.mutex.Unlock()
+
+	for i := 0; i < len(vodsToClear); i++ {
+		db.DeleteVOD(channel, vodsToClear[i])
 	}
 
 	return nil

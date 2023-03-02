@@ -21,11 +21,20 @@
 
       <p v-if="!hasPreviews">There are no image previews for this VOD.</p>
 
+      <hr v-if="channelKey" />
+
+      <div v-if="channelKey" class="form-group">
+        <div class="form-error" v-if="channelDangerError">{{ channelDangerError }}</div>
+        <button type="button" class="btn btn-danger" :disabled="busy" @click="askDelete">Delete</button>
+      </div>
       
     </div>
     <div v-if="!found">
       <h2>VOD not found</h2>
     </div>
+
+    <ConfirmationModal v-model:shown="displayConfirmDelete" message="Delete this VOD? (This action is not reversible)"
+      @confirm="doDelete"></ConfirmationModal>
   </div>
 </template>
   
@@ -39,6 +48,8 @@ import { GetAssetURL, Request } from "@/utils/request";
 import { renderTimeSeconds } from "@/utils/time-utils";
 import { ChannelStorage } from "@/control/channel-storage";
 import { Timeouts } from "@/utils/timeout";
+import { ControlAPI } from "@/api/api-control";
+import router from "@/router";
 
 interface ComponentData {
   found: boolean;
@@ -53,6 +64,12 @@ interface ComponentData {
 
   hasPreviews: boolean,
   previewsIndex: string,
+
+  displayConfirmDelete: boolean;
+
+  busy: boolean;
+
+  channelDangerError: string;
 }
 
 export default {
@@ -77,6 +94,12 @@ export default {
 
       hasPreviews: false,
       previewsIndex: "",
+
+      displayConfirmDelete: false,
+
+      busy: false,
+
+      channelDangerError: "",
     };
   },
   methods: {
@@ -171,6 +194,54 @@ export default {
         });
     },
 
+    askDelete: function () {
+      this.displayConfirmDelete = true;
+    },
+
+    doDelete: function () {
+      if (this.busy) {
+        return;
+      }
+
+      this.busy = true;
+      this.channelDangerError = "";
+
+      Request.Do(
+        ControlAPI.DeleteVOD(this.channelId, this.streamId, this.channelKey)
+      )
+        .onSuccess(() => {
+          this.busy = false;
+          router.push('/watch/' + this.channelId);
+        })
+        .onCancel(() => {
+          this.busy = false;
+        })
+        .onRequestError((err) => {
+          this.busy = false;
+          Request.ErrorHandler()
+            .add(400, "*", () => {
+              this.channelDangerError = "Bad request";
+            })
+            .add(403, "*", () => {
+              router.push('/watch/' + this.channelId);
+            })
+            .add(404, "*", () => {
+              router.push('/watch/' + this.channelId);
+            })
+            .add(500, "*", () => {
+              this.channelDangerError = "Internal server error";
+            })
+            .add("*", "*", () => {
+              this.channelDangerError = "Could not connect to the server";
+            })
+            .handle(err);
+        })
+        .onUnexpectedError((err) => {
+          this.channelDangerError = err.message;
+          console.error(err);
+          this.busy = false;
+        });
+    },
   },
   mounted: function () {
     this.findChannel();
