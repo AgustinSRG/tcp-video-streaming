@@ -30,7 +30,7 @@ The video streaming application will accept different broadcasting protocols dep
  - [Coordinator](./coordinator): This component coordinates the other components and communicates with the rest of the application, allowing it to authorize or deny broadcasting requests and to force stop any active video streams.
  - [HLS Encoder](./hls-encoder): This component encodes video streams to HLS and resizes them to multiple resolutions and frame rates.
 
-Every component connects to the coordinator via Websocket, and the coordinator will communicate with the web application vie HTTP requests.
+Every component connects to the coordinator via Websocket, and the coordinator will communicate with the web application via HTTP requests.
 
 The HLS encoders will save the files into a file system you can configure to be shared between the encoders and the web application servers, so the servers can access the HLS files as soon as they are created to serve them to the clients.
 

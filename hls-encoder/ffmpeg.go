@@ -36,9 +36,10 @@ func SetFFMPEGBinaries(ffmpeg_path string, ffprobe_path string) {
 // task - Reference to the task
 // probeData - Stream metadata (from FFPROBE)
 // Returns:
-//    command - The configured command
-//    srcManager - The source manager (optional, can be nil)
-//    cmdErr - Error
+//
+//	command - The configured command
+//	srcManager - The source manager (optional, can be nil)
+//	cmdErr - Error
 func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeData) (command *exec.Cmd, srcManager InputSourceManager, cmdErr error) {
 	cmd := exec.Command(FFMPEG_BINARY_PATH)
 
@@ -113,6 +114,8 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 		cmd.Args = append(cmd.Args, "-vf", videoFilter)
 
 		cmd.Args = append(cmd.Args, "-protocol_opts", "method=PUT")
+
+		cmd.Args = append(cmd.Args, "-start_number", "0")
 
 		cmd.Args = append(cmd.Args, "http://127.0.0.1:"+fmt.Sprint(task.server.loopBackPort)+"/img-preview/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/%d.jpg")
 	}

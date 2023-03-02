@@ -2,7 +2,10 @@
 
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Call when a new preview image is ready
 // previewIndex - Index of the new image
@@ -10,7 +13,10 @@ func (task *EncodingTask) OnPreviewImageReady(previewIndex int) {
 	task.mutex.Lock()
 	defer task.mutex.Unlock()
 
+	task.debug("Image ready with index: " + fmt.Sprint(previewIndex))
+
 	if previewIndex < task.previewsCount {
+		task.debug("Image ignored. Current count is: " + fmt.Sprint(task.previewsCount))
 		return // Ignore already added images
 	}
 
