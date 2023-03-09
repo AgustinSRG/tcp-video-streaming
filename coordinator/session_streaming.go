@@ -2,6 +2,8 @@
 
 package main
 
+import messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+
 // Handles PUBLISH-REQUEST message
 // requestId - Request ID
 // channel - The channel
@@ -118,10 +120,9 @@ func (session *ControlSession) SendPublishDeny(requestId string, channel string)
 	params["Request-ID"] = requestId
 	params["Stream-Channel"] = channel
 
-	msg := WebsocketMessage{
-		method: "PUBLISH-DENY",
-		params: params,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "PUBLISH-DENY",
+		Params: params,
 	}
 
 	err := session.Send(msg)
@@ -142,10 +143,9 @@ func (session *ControlSession) SendPublishAccept(requestId string, channel strin
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := WebsocketMessage{
-		method: "PUBLISH-ACCEPT",
-		params: params,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "PUBLISH-ACCEPT",
+		Params: params,
 	}
 
 	err := session.Send(msg)
@@ -164,10 +164,9 @@ func (session *ControlSession) SendStreamKill(channel string, streamId string) {
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := WebsocketMessage{
-		method: "STREAM-KILL",
-		params: params,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "STREAM-KILL",
+		Params: params,
 	}
 
 	err := session.Send(msg)

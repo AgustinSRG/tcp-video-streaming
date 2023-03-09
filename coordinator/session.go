@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
 	"github.com/gorilla/websocket"
 )
 
@@ -87,15 +88,15 @@ func (session *ControlSession) debug(str string) {
 
 // Sends a text message to the client
 // txt - Message contents
-func (session *ControlSession) Send(msg WebsocketMessage) error {
+func (session *ControlSession) Send(msg messages.WebsocketMessage) error {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
 
 	if LOG_DEBUG_ENABLED {
-		session.debug(">>> \n" + msg.serialize())
+		session.debug(">>> \n" + msg.Serialize())
 	}
 
-	return session.conn.WriteMessage(websocket.TextMessage, []byte(msg.serialize()))
+	return session.conn.WriteMessage(websocket.TextMessage, []byte(msg.Serialize()))
 }
 
 // Periodically sends heartbeat messages to the client
@@ -105,10 +106,8 @@ func (session *ControlSession) SendHeartBeatMessages() {
 		time.Sleep(20 * time.Second)
 
 		// Send heartbeat message
-		heartbeatMessage := WebsocketMessage{
-			method: "HEARTBEAT",
-			params: nil,
-			body:   "",
+		heartbeatMessage := messages.WebsocketMessage{
+			Method: "HEARTBEAT",
 		}
 
 		err := session.Send(heartbeatMessage)
@@ -174,7 +173,7 @@ func (session *ControlSession) Run() {
 				session.debug("<<< " + msgStr)
 			}
 
-			msg := parseWebsocketMessage(msgStr)
+			msg := messages.ParseWebsocketMessage(msgStr)
 
 			session.HandleMessage(msg)
 		}
@@ -183,8 +182,8 @@ func (session *ControlSession) Run() {
 
 // Handles incoming websocket message
 // msg - The message
-func (session *ControlSession) HandleMessage(msg WebsocketMessage) {
-	switch msg.method {
+func (session *ControlSession) HandleMessage(msg messages.WebsocketMessage) {
+	switch msg.Method {
 	case "ERROR":
 		session.log("ERROR / CODE=" + msg.GetParam("Error-Code") + " / MSG=" + msg.GetParam("Error-Message"))
 	case "PUBLISH-REQUEST":

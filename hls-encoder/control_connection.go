@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
 	"github.com/gorilla/websocket"
 )
 
@@ -141,7 +142,7 @@ func (c *ControlServerConnection) OnDisconnect(err error) {
 // Sends a message
 // msg - The message
 // Returns true if the message was successfully sent
-func (c *ControlServerConnection) Send(msg WebsocketMessage) bool {
+func (c *ControlServerConnection) Send(msg messages.WebsocketMessage) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -149,10 +150,10 @@ func (c *ControlServerConnection) Send(msg WebsocketMessage) bool {
 		return false
 	}
 
-	c.connection.WriteMessage(websocket.TextMessage, []byte(msg.serialize()))
+	c.connection.WriteMessage(websocket.TextMessage, []byte(msg.Serialize()))
 
 	if LOG_DEBUG_ENABLED {
-		LogDebug("[WS-CONTROL] >>>\n" + string(msg.serialize()))
+		LogDebug("[WS-CONTROL] >>>\n" + string(msg.Serialize()))
 	}
 
 	return true
@@ -196,7 +197,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 			LogDebug("[WS-CONTROL] <<<\n" + msgStr)
 		}
 
-		msg := parseWebsocketMessage(msgStr)
+		msg := messages.ParseWebsocketMessage(msgStr)
 
 		c.ParseIncomingMessage(&msg)
 	}
@@ -204,8 +205,8 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 
 // Parses an incoming message
 // msg - Received parsed message
-func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
-	switch msg.method {
+func (c *ControlServerConnection) ParseIncomingMessage(msg *messages.WebsocketMessage) {
+	switch msg.Method {
 	case "ERROR":
 		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.GetParam("Error-Code") + " / Details: " + msg.GetParam("Error-Message"))
 	case "ENCODE-START":
@@ -221,10 +222,8 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 		time.Sleep(20 * time.Second)
 
 		// Send heartbeat message
-		heartbeatMessage := WebsocketMessage{
-			method: "HEARTBEAT",
-			params: nil,
-			body:   "",
+		heartbeatMessage := messages.WebsocketMessage{
+			Method: "HEARTBEAT",
 		}
 
 		c.Send(heartbeatMessage)
@@ -238,10 +237,9 @@ func (c *ControlServerConnection) SendRegister(capacity int) bool {
 
 	msgParams["Capacity"] = fmt.Sprint(capacity)
 
-	msg := WebsocketMessage{
-		method: "REGISTER",
-		params: msgParams,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "REGISTER",
+		Params: msgParams,
 	}
 
 	return c.Send(msg)
@@ -262,10 +260,9 @@ func (c *ControlServerConnection) SendStreamAvailable(channel string, streamId s
 	msgParams["Resolution"] = resolution.Encode()
 	msgParams["Index-file"] = indexFile
 
-	msg := WebsocketMessage{
-		method: "STREAM-AVAILABLE",
-		params: msgParams,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "STREAM-AVAILABLE",
+		Params: msgParams,
 	}
 
 	return c.Send(msg)
@@ -280,10 +277,9 @@ func (c *ControlServerConnection) SendStreamClosed(channel string, streamId stri
 	msgParams["Stream-Channel"] = channel
 	msgParams["Stream-ID"] = streamId
 
-	msg := WebsocketMessage{
-		method: "STREAM-CLOSED",
-		params: msgParams,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "STREAM-CLOSED",
+		Params: msgParams,
 	}
 
 	return c.Send(msg)

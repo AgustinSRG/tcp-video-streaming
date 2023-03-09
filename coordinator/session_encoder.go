@@ -2,7 +2,11 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+)
 
 // Handles REGISTER message
 // capacity - Encoder capacity
@@ -123,10 +127,9 @@ func (session *ControlSession) SendEncodeStart(channel string, streamId string, 
 
 	params["Previews"] = previewsConfig.Encode()
 
-	msg := WebsocketMessage{
-		method: "ENCODE-START",
-		params: params,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "ENCODE-START",
+		Params: params,
 	}
 
 	err := session.Send(msg)
@@ -145,10 +148,9 @@ func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := WebsocketMessage{
-		method: "ENCODE-STOP",
-		params: params,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "ENCODE-STOP",
+		Params: params,
 	}
 
 	err := session.Send(msg)

@@ -10,12 +10,13 @@ import (
 	"sync"
 	"time"
 
+	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
 	"github.com/gorilla/websocket"
 )
 
 // Status data of the connection with the coordinator server
 type ControlServerConnection struct {
-	server *RTMPServer // Reference to the RTMP server
+	server *WS_Streaming_Server // Reference to the streaming server
 
 	connectionURL string          // Connection URL
 	connection    *websocket.Conn // Websocket connection
@@ -41,8 +42,8 @@ type PublishResponse struct {
 }
 
 // Initializes connection
-// server - Reference to the RTMP server
-func (c *ControlServerConnection) Initialize(server *RTMPServer) {
+// server - Reference to the streaming server
+func (c *ControlServerConnection) Initialize(server *WS_Streaming_Server) {
 	c.server = server
 	c.lock = &sync.Mutex{}
 	c.nextRequestId = 0
@@ -63,7 +64,7 @@ func (c *ControlServerConnection) Initialize(server *RTMPServer) {
 		c.enabled = false
 		return
 	}
-	pathURL, err := url.Parse("/ws/control/rtmp")
+	pathURL, err := url.Parse("/ws/control/wss")
 	if err != nil {
 		LogError(err)
 		LogWarning("CONTROL_BASE_URL not provided. The server will run in stand-alone mode.")
@@ -156,7 +157,7 @@ func (c *ControlServerConnection) OnDisconnect(err error) {
 // Sends a message
 // msg - The message
 // Returns true if the message was successfully sent
-func (c *ControlServerConnection) Send(msg WebsocketMessage) bool {
+func (c *ControlServerConnection) Send(msg messages.WebsocketMessage) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -164,10 +165,10 @@ func (c *ControlServerConnection) Send(msg WebsocketMessage) bool {
 		return false
 	}
 
-	c.connection.WriteMessage(websocket.TextMessage, []byte(msg.serialize()))
+	c.connection.WriteMessage(websocket.TextMessage, []byte(msg.Serialize()))
 
 	if LOG_DEBUG_ENABLED {
-		LogDebug("[WS-CONTROL] >>>\n" + string(msg.serialize()))
+		LogDebug("[WS-CONTROL] >>>\n" + string(msg.Serialize()))
 	}
 
 	return true
@@ -211,7 +212,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 			LogDebug("[WS-CONTROL] <<<\n" + msgStr)
 		}
 
-		msg := parseWebsocketMessage(msgStr)
+		msg := messages.ParseWebsocketMessage(msgStr)
 
 		c.ParseIncomingMessage(&msg)
 	}
@@ -219,16 +220,16 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 
 // Parses an incoming message
 // msg - Received parsed message
-func (c *ControlServerConnection) ParseIncomingMessage(msg *WebsocketMessage) {
-	switch msg.method {
+func (c *ControlServerConnection) ParseIncomingMessage(msg *messages.WebsocketMessage) {
+	switch msg.Method {
 	case "ERROR":
-		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.params["error-code"] + " / Details: " + msg.params["error-message"])
+		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.GetParam("Error-Code") + " / Details: " + msg.GetParam("Error-Message"))
 	case "PUBLISH-ACCEPT":
-		c.OnPublishAccept(msg.params["request-id"], msg.params["stream-id"])
+		c.OnPublishAccept(msg.GetParam("Request-Id"), msg.GetParam("Stream-Id"))
 	case "PUBLISH-DENY":
-		c.OnPublishDeny(msg.params["request-id"])
+		c.OnPublishDeny(msg.GetParam("Request-Id"))
 	case "STREAM-KILL":
-		c.OnPublishDeny(msg.params["request-id"])
+		c.OnPublishDeny(msg.GetParam("Request-Id"))
 	}
 }
 
@@ -284,7 +285,7 @@ func (c *ControlServerConnection) OnStreamKill(channel string, streamId string) 
 	} else {
 		publisher := c.server.GetPublisher(channel)
 
-		if publisher != nil && publisher.stream_id == streamId {
+		if publisher != nil && publisher.streamId == streamId {
 			publisher.Kill()
 		}
 	}
@@ -296,10 +297,8 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 		time.Sleep(20 * time.Second)
 
 		// Send heartbeat message
-		heartbeatMessage := WebsocketMessage{
-			method: "HEARTBEAT",
-			params: nil,
-			body:   "",
+		heartbeatMessage := messages.WebsocketMessage{
+			Method: "HEARTBEAT",
 		}
 
 		c.Send(heartbeatMessage)
@@ -311,8 +310,9 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 // key - Publishing key
 // userIP - IP address of the user
 // Returns:
-//    - accepted - True if the key was accepted
-//    - streamId - Contains the Stream ID if accepted
+//   - accepted - True if the key was accepted
+//   - streamId - Contains the Stream ID if accepted
+//
 // This method waits for the server to return a response
 func (c *ControlServerConnection) RequestPublish(channel string, key string, userIP string) (accepted bool, streamId string) {
 	if !c.enabled {
@@ -332,10 +332,9 @@ func (c *ControlServerConnection) RequestPublish(channel string, key string, use
 	msgParams["Stream-Key"] = key
 	msgParams["User-IP"] = userIP
 
-	msg := WebsocketMessage{
-		method: "PUBLISH-REQUEST",
-		params: msgParams,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "PUBLISH-REQUEST",
+		Params: msgParams,
 	}
 
 	c.lock.Lock()
@@ -373,10 +372,9 @@ func (c *ControlServerConnection) PublishEnd(channel string, streamId string) bo
 	msgParams["Stream-Channel"] = channel
 	msgParams["Stream-ID"] = streamId
 
-	msg := WebsocketMessage{
-		method: "PUBLISH-END",
-		params: msgParams,
-		body:   "",
+	msg := messages.WebsocketMessage{
+		Method: "PUBLISH-END",
+		Params: msgParams,
 	}
 
 	return c.Send(msg)

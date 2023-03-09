@@ -1,3 +1,5 @@
+github.com/AgustinSRG/tcp-video-streaming/common/message v0.0.0-20230309131539-69820ddf6df0 h1:zsXcKkW7b+HHF4qFNBvxF74utU+BAN248ugH5KAYFfY=
+github.com/AgustinSRG/tcp-video-streaming/common/message v0.0.0-20230309131539-69820ddf6df0/go.mod h1:Yg1OpUT4Epkm3wA7FiGwI2/frAY4N5sxKJBkK8ezLdg=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
