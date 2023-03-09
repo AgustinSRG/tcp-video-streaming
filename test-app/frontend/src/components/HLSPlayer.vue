@@ -6,7 +6,7 @@
 
 <script lang="ts">
 
-import Hls from "hls.js/dist/hls.min";
+import Hls from "hls.js";
 
 export default {
   name: "HLSPlayer",
@@ -26,7 +26,7 @@ export default {
       }
 
       if (Hls.isSupported()) {
-        const hls = new Hls();
+        const hls = new Hls({ enableWorker: false });
         this.$options.hls = hls;
         hls.loadSource(this.url);
         hls.attachMedia(video);
