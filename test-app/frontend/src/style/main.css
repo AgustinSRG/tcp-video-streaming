@@ -112,3 +112,7 @@ h1 {
     width: 720px;
     max-width: 100%;
 }
+
+.publish-preview-video.hidden {
+    display: none;
+}

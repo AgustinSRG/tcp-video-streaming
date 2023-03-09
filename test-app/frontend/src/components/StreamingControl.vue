@@ -29,9 +29,15 @@
         <h3>Publish from your browser</h3>
         <p v-if="loadingPublishingDetails">Loading...</p>
         <div class="form-group" v-if="!loadingPublishingDetails">
-          <button type="button" class="btn btn-primary btn-margin">Publish from camera</button>
-          <button type="button" class="btn btn-primary btn-margin">Publish screen share</button>
-          <button type="button" class="btn btn-primary btn-margin">Stop publishing</button>
+          <button type="button" class="btn btn-primary btn-margin" :disabled="publishing"
+            @click="startPublishCamera">Publish from camera</button>
+          <button type="button" class="btn btn-primary btn-margin" :disabled="publishing"
+            @click="startPublishScreen">Publish screen share</button>
+          <button type="button" class="btn btn-primary btn-margin" :disabled="!publishing" @click="stopPublish">Stop
+            publishing</button>
+        </div>
+        <div class="form-group">
+          <video class="publish-preview-video" :class="{ hidden: !publishing }" muted></video>
         </div>
       </div>
 
@@ -151,6 +157,7 @@
     </ConfirmationModal>
     <ConfirmationModal v-model:shown="displayConfirmRefresh"
       message="Refresh streaming key? (The old one will be invalidated)" @confirm="doRefresh"></ConfirmationModal>
+    <ErrorModal :message="errorModalMessage" v-model:shown="errorModalShown"></ErrorModal>
   </div>
 </template>
   
@@ -162,9 +169,11 @@ import { encodePreviewsConfiguration, parsePreviewsConfiguration } from "@/utils
 import { GetAssetURL, Request } from "@/utils/request";
 import { encodeResolutionList, parseResolutionList, type Resolution } from "@/utils/resolutions";
 import { Timeouts } from "@/utils/timeout";
+import { WebSocketPublisher, getWebsocketPublishingURL } from "@/control/websocket-publisher";
 
 import HLSPlayer from "./HLSPlayer.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
+import ErrorModal from "./ErrorModal.vue";
 import { RouterLink } from 'vue-router';
 import router from "@/router";
 import { renderTimeSeconds } from "@/utils/time-utils";
@@ -203,6 +212,11 @@ interface ComponentData {
 
   channelConfigError: string;
   channelDangerError: string;
+
+  publishing: boolean;
+
+  errorModalShown: boolean;
+  errorModalMessage: string;
 }
 
 export default {
@@ -212,6 +226,7 @@ export default {
     HLSPlayer,
     RouterLink,
     ConfirmationModal,
+    ErrorModal,
   },
   data: function (): ComponentData {
     return {
@@ -248,6 +263,11 @@ export default {
 
       channelConfigError: "",
       channelDangerError: "",
+
+      publishing: false,
+
+      errorModalShown: false,
+      errorModalMessage: "",
     };
   },
   methods: {
@@ -592,12 +612,117 @@ export default {
           this.busy = false;
         });
     },
+
+    startPublishCamera: function () {
+      if (this.publishing) {
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return;
+      }
+
+      this.publishing = true;
+
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream: MediaStream) => {
+        this.startPublish(stream)
+      }).catch(err => {
+        this.publishing = false;
+        this.errorModalShown = true;
+        this.errorModalMessage = "Error: " + err.message;
+      });
+    },
+
+    startPublishScreen: function () {
+      if (this.publishing) {
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        return;
+      }
+
+      this.publishing = true;
+
+      navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then((stream: MediaStream) => {
+        this.startPublish(stream)
+      }).catch(err => {
+        this.publishing = false;
+        this.errorModalShown = true;
+        this.errorModalMessage = "Error: " + err.message;
+      });
+    },
+
+    startPublish: function (stream: MediaStream) {
+      if (this.$options.mediaPublisher) {
+        this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
+        this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
+        this.$options.mediaPublisher.stop();
+        this.$options.mediaPublisher = null;
+      }
+
+      this.publishing = true;
+
+      this.$options.mediaPublisher = new WebSocketPublisher(stream, getWebsocketPublishingURL(this.wssBase, this.channelId, this.channelKey));
+      this.$options.mediaPublisher.addEventListener('close', this.$options.onPublisherCloseH);
+      this.$options.mediaPublisher.addEventListener('error', this.$options.onPublisherErrorH);
+
+      this.setVideoPublishPreview(stream);
+    },
+
+    clearVideoPublishPreview: function () {
+      const video = this.$el.querySelector(".publish-preview-video");
+
+      if (!video) {
+        return;
+      }
+
+      video.pause();
+      video.removeAttribute('src');
+      video.removeAttribute('srcObject');
+      video.load();
+    },
+
+    setVideoPublishPreview: function (stream: MediaStream) {
+      const video = this.$el.querySelector(".publish-preview-video");
+
+      if (!video) {
+        return;
+      }
+
+      video.srcObject = stream;
+      video.muted = true;
+      video.play();
+    },
+
+    stopPublish: function () {
+      this.publishing = false;
+      if (this.$options.mediaPublisher) {
+        this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
+        this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
+        this.$options.mediaPublisher.stop();
+        this.$options.mediaPublisher = null;
+      }
+      this.clearVideoPublishPreview();
+    },
+
+    onPublisherClose() {
+      this.clearVideoPublishPreview();
+      this.publishing = false;
+    },
+
+    onPublisherError(ev: ErrorEvent) {
+      console.error(ev.error);
+      this.errorModalShown = true;
+      this.errorModalMessage = "Error: " + (ev.error.message || "Could not connect to the streaming server.");
+    },
   },
   mounted: function () {
     this.loadPublishingDetails();
     this.findChannel();
 
     this.$options.tickTimer = setInterval(this.updateNow.bind(this), 500);
+
+    this.$options.onPublisherCloseH = this.onPublisherClose.bind(this);
+    this.$options.onPublisherErrorH = this.onPublisherError.bind(this);
   },
   beforeUnmount: function () {
     Timeouts.Abort("load-publishing-details");
@@ -607,6 +732,13 @@ export default {
     Request.Abort("load-channel-status-control");
 
     clearInterval(this.$options.tickTimer);
+
+    if (this.$options.mediaPublisher) {
+      this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
+      this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
+      this.$options.mediaPublisher.stop();
+      this.$options.mediaPublisher = null;
+    }
   },
   watch: {
     $route() {
