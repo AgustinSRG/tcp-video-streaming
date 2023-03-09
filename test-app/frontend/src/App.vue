@@ -10,4 +10,5 @@ import { RouterView } from 'vue-router'
 
 <style>
 @import "./style/main.css";
+@import "./style/modal.css";
 </style>

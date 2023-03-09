@@ -3,8 +3,7 @@
     <div class="modal">
       <div class="modal-message">{{ message }}</div>
       <div class="modal-controls">
-        <button type="button" class="btn btn-primary btn-margin" @click="confirm">Yes</button>
-        <button type="button" class="btn btn-primary btn-margin" @click="close">No</button>
+        <button type="button" class="btn btn-primary btn-margin" @click="close">Ok</button>
       </div>
     </div>
   </div>
@@ -15,8 +14,8 @@ import { defineComponent } from "vue";
 import { useVModel } from "../utils/vmodel";
 
 export default defineComponent({
-  name: "ConfirmationModal",
-  emits: ["confirm", "update:shown"],
+  name: "ErrorModal",
+  emits: ["update:shown"],
   props: {
     shown: Boolean,
     message: String,
@@ -37,7 +36,6 @@ export default defineComponent({
 
     confirm: function (e: Event) {
       e.stopPropagation();
-      this.$emit("confirm");
       this.shownState = false;
     },
   },
