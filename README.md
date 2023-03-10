@@ -9,7 +9,7 @@ When streaming video over TCP, you can preserve the quality. However, a delay is
 For sending the video stream:
 
  - RTMP (Real Time Messaging Protocol)
- - H.264/AAC over Websocket
+ - WebSocket
 
 The RTMP protocol is widely supported by broadcasting tools like OBS, while the Websocket protocol allows the broadcasting from web browsers.
 
