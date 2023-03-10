@@ -2,7 +2,7 @@
 
 package main
 
-import messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+import messages "github.com/AgustinSRG/go-simple-rpc-message"
 
 // Handles PUBLISH-REQUEST message
 // requestId - Request ID
@@ -120,7 +120,7 @@ func (session *ControlSession) SendPublishDeny(requestId string, channel string)
 	params["Request-ID"] = requestId
 	params["Stream-Channel"] = channel
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "PUBLISH-DENY",
 		Params: params,
 	}
@@ -143,7 +143,7 @@ func (session *ControlSession) SendPublishAccept(requestId string, channel strin
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "PUBLISH-ACCEPT",
 		Params: params,
 	}
@@ -164,7 +164,7 @@ func (session *ControlSession) SendStreamKill(channel string, streamId string) {
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "STREAM-KILL",
 		Params: params,
 	}

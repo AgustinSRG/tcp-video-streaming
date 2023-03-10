@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+	messages "github.com/AgustinSRG/go-simple-rpc-message"
 	"github.com/gorilla/websocket"
 )
 
@@ -88,7 +88,7 @@ func (session *ControlSession) debug(str string) {
 
 // Sends a text message to the client
 // txt - Message contents
-func (session *ControlSession) Send(msg messages.WebsocketMessage) error {
+func (session *ControlSession) Send(msg messages.RPCMessage) error {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
 
@@ -106,7 +106,7 @@ func (session *ControlSession) SendHeartBeatMessages() {
 		time.Sleep(20 * time.Second)
 
 		// Send heartbeat message
-		heartbeatMessage := messages.WebsocketMessage{
+		heartbeatMessage := messages.RPCMessage{
 			Method: "HEARTBEAT",
 		}
 
@@ -173,7 +173,7 @@ func (session *ControlSession) Run() {
 				session.debug("<<< " + msgStr)
 			}
 
-			msg := messages.ParseWebsocketMessage(msgStr)
+			msg := messages.ParseRPCMessage(msgStr)
 
 			session.HandleMessage(msg)
 		}
@@ -182,7 +182,7 @@ func (session *ControlSession) Run() {
 
 // Handles incoming websocket message
 // msg - The message
-func (session *ControlSession) HandleMessage(msg messages.WebsocketMessage) {
+func (session *ControlSession) HandleMessage(msg messages.RPCMessage) {
 	switch msg.Method {
 	case "ERROR":
 		session.log("ERROR / CODE=" + msg.GetParam("Error-Code") + " / MSG=" + msg.GetParam("Error-Message"))

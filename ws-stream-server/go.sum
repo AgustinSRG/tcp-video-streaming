@@ -1,5 +1,5 @@
-github.com/AgustinSRG/tcp-video-streaming/common/message v0.0.0-20230309131539-69820ddf6df0 h1:zsXcKkW7b+HHF4qFNBvxF74utU+BAN248ugH5KAYFfY=
-github.com/AgustinSRG/tcp-video-streaming/common/message v0.0.0-20230309131539-69820ddf6df0/go.mod h1:Yg1OpUT4Epkm3wA7FiGwI2/frAY4N5sxKJBkK8ezLdg=
+github.com/AgustinSRG/go-simple-rpc-message v1.0.0 h1:mTZdrtoRfrCqLnscCx2bTMigTTuot/OKPIXT7RvtDMw=
+github.com/AgustinSRG/go-simple-rpc-message v1.0.0/go.mod h1:AXNiixxVqEZRfWPX+d0lPEcX4U8+HjTsYeZIzZOcVAY=
 github.com/apparentlymart/go-cidr v1.1.0 h1:2mAhrMoF+nhXqxTzSZMUzDHkLjmIHC+Zzn4tdgBZjnU=
 github.com/apparentlymart/go-cidr v1.1.0/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

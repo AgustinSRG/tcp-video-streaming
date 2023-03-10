@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+	messages "github.com/AgustinSRG/go-simple-rpc-message"
 	"github.com/gorilla/websocket"
 )
 
@@ -157,7 +157,7 @@ func (c *ControlServerConnection) OnDisconnect(err error) {
 // Sends a message
 // msg - The message
 // Returns true if the message was successfully sent
-func (c *ControlServerConnection) Send(msg messages.WebsocketMessage) bool {
+func (c *ControlServerConnection) Send(msg messages.RPCMessage) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -212,7 +212,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 			LogDebug("[WS-CONTROL] <<<\n" + msgStr)
 		}
 
-		msg := messages.ParseWebsocketMessage(msgStr)
+		msg := messages.ParseRPCMessage(msgStr)
 
 		c.ParseIncomingMessage(&msg)
 	}
@@ -220,7 +220,7 @@ func (c *ControlServerConnection) RunReaderLoop(conn *websocket.Conn) {
 
 // Parses an incoming message
 // msg - Received parsed message
-func (c *ControlServerConnection) ParseIncomingMessage(msg *messages.WebsocketMessage) {
+func (c *ControlServerConnection) ParseIncomingMessage(msg *messages.RPCMessage) {
 	switch msg.Method {
 	case "ERROR":
 		LogErrorMessage("[WS-CONTROL] Remote error. Code=" + msg.GetParam("Error-Code") + " / Details: " + msg.GetParam("Error-Message"))
@@ -297,7 +297,7 @@ func (c *ControlServerConnection) RunHeartBeatLoop() {
 		time.Sleep(20 * time.Second)
 
 		// Send heartbeat message
-		heartbeatMessage := messages.WebsocketMessage{
+		heartbeatMessage := messages.RPCMessage{
 			Method: "HEARTBEAT",
 		}
 
@@ -332,7 +332,7 @@ func (c *ControlServerConnection) RequestPublish(channel string, key string, use
 	msgParams["Stream-Key"] = key
 	msgParams["User-IP"] = userIP
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "PUBLISH-REQUEST",
 		Params: msgParams,
 	}
@@ -372,7 +372,7 @@ func (c *ControlServerConnection) PublishEnd(channel string, streamId string) bo
 	msgParams["Stream-Channel"] = channel
 	msgParams["Stream-ID"] = streamId
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "PUBLISH-END",
 		Params: msgParams,
 	}

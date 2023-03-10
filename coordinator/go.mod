@@ -8,4 +8,4 @@ require github.com/gorilla/websocket v1.5.0
 
 require github.com/golang-jwt/jwt v3.2.2+incompatible
 
-require github.com/AgustinSRG/tcp-video-streaming/common/message v0.0.0-20230309131539-69820ddf6df0
+require github.com/AgustinSRG/go-simple-rpc-message v1.0.0

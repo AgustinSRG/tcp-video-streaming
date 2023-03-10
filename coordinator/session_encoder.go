@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 
-	messages "github.com/AgustinSRG/tcp-video-streaming/common/message"
+	messages "github.com/AgustinSRG/go-simple-rpc-message"
 )
 
 // Handles REGISTER message
@@ -127,7 +127,7 @@ func (session *ControlSession) SendEncodeStart(channel string, streamId string, 
 
 	params["Previews"] = previewsConfig.Encode()
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "ENCODE-START",
 		Params: params,
 	}
@@ -148,7 +148,7 @@ func (session *ControlSession) SendEncodeStop(channel string, streamId string) {
 	params["Stream-Channel"] = channel
 	params["Stream-ID"] = streamId
 
-	msg := messages.WebsocketMessage{
+	msg := messages.RPCMessage{
 		Method: "ENCODE-STOP",
 		Params: params,
 	}
