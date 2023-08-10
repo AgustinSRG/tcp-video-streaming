@@ -1,5 +1,11 @@
 FROM golang:latest
 
+# Dependencies
+
+RUN apk add --no-cache ffmpeg
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV FFPROBE_PATH=/usr/bin/ffprobe
+
 WORKDIR /root
 
 # Copy files
@@ -13,10 +19,6 @@ RUN go get .
 # Compile
 
 RUN go build -o hls-encoder
-# Expose ports
-
-EXPOSE 80
-EXPOSE 443
 
 # Entry point
 
