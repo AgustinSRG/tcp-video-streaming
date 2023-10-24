@@ -8,8 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
 // Validates stream ID
@@ -55,7 +53,7 @@ func checkSessionCanPlay(ipStr string) bool {
 	parts := strings.Split(playWhiteList, ",")
 
 	for i := 0; i < len(parts); i++ {
-		rang, e := iprange.ParseRange(parts[i])
+		_, rang, e := net.ParseCIDR(parts[i])
 
 		if e != nil {
 			LogError(e)

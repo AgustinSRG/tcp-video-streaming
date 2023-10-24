@@ -6,8 +6,6 @@ import (
 	"net"
 	"os"
 	"strings"
-
-	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
 // Adds IP address to the list
@@ -47,7 +45,7 @@ func (server *WS_Streaming_Server) isIPExempted(ipStr string) bool {
 	parts := strings.Split(r, ",")
 
 	for i := 0; i < len(parts); i++ {
-		rang, e := iprange.ParseRange(parts[i])
+		_, rang, e := net.ParseCIDR(parts[i])
 
 		if e != nil {
 			LogError(e)

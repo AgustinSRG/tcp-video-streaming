@@ -12,8 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/netdata/go.d.plugin/pkg/iprange"
 )
 
 // Stores status data for a specific streaming channel
@@ -185,7 +183,7 @@ func (server *RTMPServer) isIPExempted(ipStr string) bool {
 	parts := strings.Split(r, ",")
 
 	for i := 0; i < len(parts); i++ {
-		rang, e := iprange.ParseRange(parts[i])
+		_, rang, e := net.ParseCIDR(parts[i])
 
 		if e != nil {
 			LogError(e)
@@ -390,8 +388,9 @@ func (server *RTMPServer) GetPlayers(channel string) []*RTMPSession {
 // key - The channel key used by the player
 // s - The session
 // Returns:
-//   idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
-//   err - Error. If not nil, it means the channel of the key are not valid
+//
+//	idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
+//	err - Error. If not nil, it means the channel of the key are not valid
 func (server *RTMPServer) AddPlayer(channel string, key string, s *RTMPSession) (idling bool, err error) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()
