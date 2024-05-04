@@ -18,8 +18,9 @@ import (
 // Probes WebSocket source
 // sourceURI - WebSocket URI
 // Returns
-//  probeData - Video stream probe data
-//  err - Error
+//
+//	probeData - Video stream probe data
+//	err - Error
 func ProbeStreamSource_WS(sourceURI string) (probeData *ffprobe.ProbeData, err error) {
 	// Get first video chunk from websocket connection
 	conn, _, err := websocket.DefaultDialer.Dial(sourceURI+"/probe", nil)
@@ -87,8 +88,9 @@ type WebSocketInputManager struct {
 // cmd - A reference to the command (will be configured)
 // sourceURI - WebSocket URI
 // Returns
-//  manager - A manager to control the source
-//  err - Error
+//
+//	manager - A manager to control the source
+//	err - Error
 func PrepareEncodingProcessToReceiveSource_WS(cmd *exec.Cmd, sourceURI string) (manager InputSourceManager, err error) {
 	cmd.Args = append(cmd.Args, "-i", "-")
 
@@ -102,6 +104,7 @@ func PrepareEncodingProcessToReceiveSource_WS(cmd *exec.Cmd, sourceURI string) (
 		sourceURI: sourceURI,
 		conn:      nil,
 		stdin:     stdin,
+		mutex:     &sync.Mutex{},
 	}
 
 	return mng, nil
