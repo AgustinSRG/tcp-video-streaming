@@ -5,6 +5,10 @@
 		}
 	],
 	"settings": {
-		"files.exclude": {},
+		"files.exclude": {
+			"test-app/data": true,
+			"test-app/frontend/node_modules": true,
+			"test-app/frontend/dist": true,
+		},
 	}
 }

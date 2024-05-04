@@ -1,0 +1,11 @@
+/test-app
+/doc
+.git
+*.exe
+.env
+.gitignore
+*.drawio
+*.jpg
+README.md
+Dockerfile
+
