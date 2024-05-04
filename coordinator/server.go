@@ -301,14 +301,14 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 			associatedChannels := session.GetAssociatedChannels()
 
 			for i := 0; i < len(associatedChannels); i++ {
-				channelData := session.server.coordinator.AcquireChannel(associatedChannels[i])
+				channelData := server.coordinator.AcquireChannel(associatedChannels[i])
 
 				if !channelData.closed && channelData.publisher == session.id {
 					channelData.closed = true
 
 					// Find encoder and notice it
 					encoderId := channelData.encoder
-					encoderSession := session.server.GetSession(encoderId)
+					encoderSession := server.sessions[encoderId]
 
 					if encoderSession != nil {
 						encoderSession.SendEncodeStop(channelData.id, channelData.streamId)
@@ -316,7 +316,7 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 					}
 				}
 
-				session.server.coordinator.ReleaseChannel(channelData)
+				server.coordinator.ReleaseChannel(channelData)
 			}
 		case SESSION_TYPE_HLS:
 			server.coordinator.DeregisterEncoder(id)
@@ -324,7 +324,7 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 			associatedChannels := session.GetAssociatedChannels()
 
 			for i := 0; i < len(associatedChannels); i++ {
-				channelData := session.server.coordinator.AcquireChannel(associatedChannels[i])
+				channelData := server.coordinator.AcquireChannel(associatedChannels[i])
 
 				// Close active stream
 				session.server.coordinator.OnActiveStreamClosed(channelData.id, channelData.streamId)
@@ -332,7 +332,7 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 				if !channelData.closed && channelData.encoder == session.id {
 					// Find publisher and kill the stream
 					publisherId := channelData.publisher
-					pubSession := session.server.GetSession(publisherId)
+					pubSession := server.sessions[publisherId]
 
 					if pubSession != nil {
 						pubSession.SendStreamKill(channelData.id, channelData.streamId)
@@ -344,7 +344,7 @@ func (server *Streaming_Coordinator_Server) RemoveSession(id uint64) {
 					event.cancelled = true
 				}
 
-				session.server.coordinator.ReleaseChannel(channelData)
+				server.coordinator.ReleaseChannel(channelData)
 			}
 		}
 	}
