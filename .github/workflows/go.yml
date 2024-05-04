@@ -6,6 +6,12 @@ name: Go
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - coordinator/**
+      - hls-encoder/**
+      - rtmp-server/**
+      - ws-stream-server/**
+      - .github/workflows/go.yml
   pull_request:
     branches: [ "master" ]
 
