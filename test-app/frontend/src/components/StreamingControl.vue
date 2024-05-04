@@ -655,7 +655,7 @@ export default {
       if (this.$options.mediaPublisher) {
         this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
         this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
-        this.$options.mediaPublisher.stop();
+        this.$options.mediaPublisher.close();
         this.$options.mediaPublisher = null;
       }
 
