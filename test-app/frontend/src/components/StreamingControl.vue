@@ -228,6 +228,14 @@ export default {
     ConfirmationModal,
     ErrorModal,
   },
+  setup: function () {
+    return {
+      tickTimer: 0,
+      mediaPublisher: null as null | WebSocketPublisher,
+      onPublisherCloseH: () => {},
+      onPublisherErrorH: () => {},
+    };
+  },
   data: function (): ComponentData {
     return {
       found: false,
@@ -652,18 +660,18 @@ export default {
     },
 
     startPublish: function (stream: MediaStream) {
-      if (this.$options.mediaPublisher) {
-        this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
-        this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
-        this.$options.mediaPublisher.close();
-        this.$options.mediaPublisher = null;
+      if (this.mediaPublisher) {
+        this.mediaPublisher.removeEventListener('close', this.onPublisherCloseH);
+        this.mediaPublisher.removeEventListener('error', this.onPublisherErrorH);
+        this.mediaPublisher.close();
+        this.mediaPublisher = null;
       }
 
       this.publishing = true;
 
-      this.$options.mediaPublisher = new WebSocketPublisher(stream, getWebsocketPublishingURL(this.wssBase, this.channelId, this.channelKey));
-      this.$options.mediaPublisher.addEventListener('close', this.$options.onPublisherCloseH);
-      this.$options.mediaPublisher.addEventListener('error', this.$options.onPublisherErrorH);
+      this.mediaPublisher = new WebSocketPublisher(stream, getWebsocketPublishingURL(this.wssBase, this.channelId, this.channelKey));
+      this.mediaPublisher.addEventListener('close', this.onPublisherCloseH);
+      this.mediaPublisher.addEventListener('error', this.onPublisherErrorH);
 
       this.setVideoPublishPreview(stream);
     },
@@ -695,11 +703,11 @@ export default {
 
     stopPublish: function () {
       this.publishing = false;
-      if (this.$options.mediaPublisher) {
-        this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
-        this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
-        this.$options.mediaPublisher.stop();
-        this.$options.mediaPublisher = null;
+      if (this.mediaPublisher) {
+        this.mediaPublisher.removeEventListener('close', this.onPublisherCloseH);
+        this.mediaPublisher.removeEventListener('error', this.onPublisherErrorH);
+        this.mediaPublisher.close();
+        this.mediaPublisher = null;
       }
       this.clearVideoPublishPreview();
     },
@@ -719,10 +727,10 @@ export default {
     this.loadPublishingDetails();
     this.findChannel();
 
-    this.$options.tickTimer = setInterval(this.updateNow.bind(this), 500);
+    this.tickTimer = setInterval(this.updateNow.bind(this), 500);
 
-    this.$options.onPublisherCloseH = this.onPublisherClose.bind(this);
-    this.$options.onPublisherErrorH = this.onPublisherError.bind(this);
+    this.onPublisherCloseH = this.onPublisherClose.bind(this);
+    this.onPublisherErrorH = this.onPublisherError.bind(this);
   },
   beforeUnmount: function () {
     Timeouts.Abort("load-publishing-details");
@@ -731,13 +739,13 @@ export default {
     Timeouts.Abort("load-channel-status-control");
     Request.Abort("load-channel-status-control");
 
-    clearInterval(this.$options.tickTimer);
+    clearInterval(this.tickTimer);
 
-    if (this.$options.mediaPublisher) {
-      this.$options.mediaPublisher.removeEventListener('close', this.$options.onPublisherCloseH);
-      this.$options.mediaPublisher.removeEventListener('error', this.$options.onPublisherErrorH);
-      this.$options.mediaPublisher.stop();
-      this.$options.mediaPublisher = null;
+    if (this.mediaPublisher) {
+      this.mediaPublisher.removeEventListener('close', this.onPublisherCloseH);
+      this.mediaPublisher.removeEventListener('error', this.onPublisherErrorH);
+      this.mediaPublisher.close();
+      this.mediaPublisher = null;
     }
   },
   watch: {

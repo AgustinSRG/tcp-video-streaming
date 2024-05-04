@@ -66,6 +66,11 @@ export default {
     RouterLink,
     ConfirmationModal,
   },
+  setup: function () {
+    return {
+      tickTimer: 0,
+    };
+  },
   data: function (): ComponentData {
     return {
       found: false,
@@ -213,7 +218,7 @@ export default {
   mounted: function () {
     this.findChannel();
 
-    this.$options.tickTimer = setInterval(this.updateNow.bind(this), 500);
+    this.tickTimer = setInterval(this.updateNow.bind(this), 500);
   },
   beforeUnmount: function () {
     Timeouts.Abort("load-channel-status-watch");
@@ -222,7 +227,7 @@ export default {
     Timeouts.Abort("load-channel-vods-watch");
     Request.Abort("load-channel-vods-watch");
 
-    clearInterval(this.$options.tickTimer);
+    clearInterval(this.tickTimer);
   },
   watch: {
     $route() {

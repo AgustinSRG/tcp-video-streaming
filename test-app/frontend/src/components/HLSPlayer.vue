@@ -13,6 +13,11 @@ export default {
   props: {
     url: String,
   },
+  setup: function () {
+    return {
+      hls: null as Hls | null,
+    };
+  },
   methods: {
     load: function () {
       if (!this.url) {
@@ -27,7 +32,7 @@ export default {
 
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: false });
-        this.$options.hls = hls;
+        this.hls = hls;
         hls.loadSource(this.url);
         hls.attachMedia(video);
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -38,9 +43,9 @@ export default {
     },
 
     clear() {
-      if (this.$options.hls) {
-        this.$options.hls.destroy();
-        this.$options.hls = null;
+      if (this.hls) {
+        this.hls.destroy();
+        this.hls = null;
       }
 
       const video = this.$el.querySelector("video");
