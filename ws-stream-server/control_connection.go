@@ -229,7 +229,7 @@ func (c *ControlServerConnection) ParseIncomingMessage(msg *messages.RPCMessage)
 	case "PUBLISH-DENY":
 		c.OnPublishDeny(msg.GetParam("Request-Id"))
 	case "STREAM-KILL":
-		c.OnStreamKill(msg.GetParam("Request-Id"), msg.GetParam("Stream-Id"))
+		c.OnStreamKill(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-Id"))
 	}
 }
 
