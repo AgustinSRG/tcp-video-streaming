@@ -154,7 +154,7 @@ func StreamingCommands_GetReport() (error, *ReportAPIResponse) {
 }
 
 func StreamingCommands_CloseStream(channel string, streamId string) error {
-	err, _ := sendStreamingCommand("GET", "/commands/close", map[string]string{
+	err, _ := sendStreamingCommand("POST", "/commands/close", map[string]string{
 		"x-streaming-channel": channel,
 		"x-streaming-id":      streamId,
 	})
@@ -162,5 +162,6 @@ func StreamingCommands_CloseStream(channel string, streamId string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

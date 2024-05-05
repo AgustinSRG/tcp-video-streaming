@@ -244,6 +244,7 @@ func (db *StreamingTestAppDatabase) AddAvailableStream(channel string, streamId 
 		if streamId != channelData.StreamId {
 			channelData.StreamId = streamId
 			channelData.LiveSubStreams = make([]SubStream, 0)
+			channelData.LiveStartTimestamp = time.Now().UnixMilli()
 		}
 
 		alreadyExists := false
