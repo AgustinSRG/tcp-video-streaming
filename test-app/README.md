@@ -6,14 +6,24 @@ This test app provides a simple frontend that allows you to generate streaming k
 
 ## Running with Docker
 
-You need Docker and Docker-Compose installed. You can simply wun the test app by typing:
+You need Docker and Docker-Compose installed. 
+
+First, set up a `.env` file in this path, in order to configure the following environment variables:
+
+| Variable        | Description                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| `SHARED_SECRET` | Secret to share between the test application and the streaming components. Must be a random string. |
+
+Then, you can simply run the test application by typing:
 
 ```
-docker-compose up
+docker compose up -d
 ```
+
+You can access the test application at http://localhost
 
 You can stop it using:
 
 ```
-docker-compose down
+docker compose down
 ```

@@ -1,0 +1,107 @@
+version: '3.7'
+
+services:
+
+  # Test application
+
+  test_app:
+    hostname: test-app
+    networks:
+      - tcp_video_streaming_test
+    ports:
+      - 80:80
+    image: tcp-video-streaming-test-app
+    build:
+      context: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/root/data
+      - ./db:/root/db
+    environment:
+      - DB_PATH=/root/db/
+      - CONTROL_SERVER_BASE_URL=http://coordinator
+      - RTMP_BASE_URL=rtmp://localhost
+      - WSS_BASE_URL=ws://localhost:8000
+      - HLS_FILESYSTEM_PATH=/root/data
+      - KEY_VERIFICATION_AUTH=Bearer
+      - KEY_VERIFICATION_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+      - EVENT_CALLBACK_AUTH=Bearer
+      - EVENT_CALLBACK_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+      - STREAMING_COMMANDS_AUTH=Bearer
+      - STREAMING_COMMANDS_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+  
+  # Streaming components
+
+  coordinator:
+    hostname: coordinator
+    networks:
+      - tcp_video_streaming_test
+    ports:
+      - 80
+    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    restart: unless-stopped
+    command: coordinator
+    environment:
+      - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
+      - KEY_VERIFICATION_URL=http://test-app/callbacks/key_verification
+      - KEY_VERIFICATION_AUTH=Bearer
+      - KEY_VERIFICATION_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+      - EVENT_CALLBACK_URL=http://test-app/callbacks/events
+      - EVENT_CALLBACK_AUTH=Bearer
+      - EVENT_CALLBACK_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+      - COMMANDS_API_AUTH=Bearer
+      - COMMANDS_API_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+  
+  hls_encoder:
+    hostname: hls-encoder
+    networks:
+      - tcp_video_streaming_test
+    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    restart: unless-stopped
+    command: hls-encoder
+    volumes:
+      - ./data:/root/data
+    environment:
+      - HLS_FILESYSTEM_PATH=/root/data
+      - CONTROL_BASE_URL=ws://coordinator/
+      - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
+      - SERVER_CAPACITY=100
+
+  rtmp_server:
+    hostname: rtmp-server
+    ports:
+      - 1935:1935
+    networks:
+      - tcp_video_streaming_test
+    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    restart: unless-stopped
+    command: rtmp-server
+    environment:
+      - RTMP_CHUNK_SIZE=5000
+      - CONCURRENT_LIMIT_WHITELIST=*
+      - EXTERNAL_PORT=1935
+      - EXTERNAL_SSL=NO
+      - CONTROL_BASE_URL=ws://coordinator/
+      - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
+      - RTMP_PLAY_WHITELIST=*
+
+  ws_stream_server:
+    hostname: ws-stream-server
+    ports:
+      - 8000:80
+    networks:
+      - tcp_video_streaming_test
+    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    restart: unless-stopped
+    command: ws-stream-server
+    environment:
+      - DISABLE_TEST_CLIENT=YES
+      - CONCURRENT_LIMIT_WHITELIST=*
+      - EXTERNAL_PORT=80
+      - EXTERNAL_SSL=NO
+      - CONTROL_BASE_URL=ws://coordinator/
+      - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
+      - PLAY_WHITELIST=*
+
+networks:
+  tcp_video_streaming_test:
