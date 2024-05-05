@@ -53,6 +53,8 @@ services:
       - COMMANDS_API_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
   
   hls_encoder:
+    depends_on:
+      - coordinator
     hostname: hls-encoder
     networks:
       - tcp_video_streaming_test
@@ -68,6 +70,8 @@ services:
       - SERVER_CAPACITY=100
 
   rtmp_server:
+    depends_on:
+      - coordinator
     hostname: rtmp-server
     ports:
       - 1935:1935
@@ -86,6 +90,8 @@ services:
       - RTMP_PLAY_WHITELIST=*
 
   ws_stream_server:
+    depends_on:
+      - coordinator
     hostname: ws-stream-server
     ports:
       - 8000:80
