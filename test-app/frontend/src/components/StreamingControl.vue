@@ -73,13 +73,15 @@
                 <tr>
                   <th>Resolution</th>
                   <th>Frames per second</th>
+                  <th>Bitrate (kb/s)</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="r in resolutions" :key="r.width + 'x' + r.height + '-' + r.fps">
                   <td>{{ r.width }}x{{ r.height }}</td>
-                  <td>{{ r.fps }}</td>
+                  <td>{{ r.fps || "-" }}</td>
+                  <td>{{ r.bitRate || "-" }}</td>
                   <td><button type="button" class="btn btn-danger" :disabled="busy"
                       @click="deleteResolution(r)">Delete</button></td>
                 </tr>
@@ -88,6 +90,8 @@
                       class="form-control" /> x <input type="number" v-model.number="resToAddHeight" :disabled="busy"
                       placeholder="height (px)" class="form-control" /></td>
                   <td><input type="number" v-model.number="resToAddFps" :disabled="busy" placeholder="fps"
+                      class="form-control" /></td>
+                      <td><input type="number" v-model.number="resToAddBitRate" :disabled="busy" placeholder="bitrate (kb/s)"
                       class="form-control" /></td>
                   <td><button type="button" class="btn btn-primary" :disabled="busy" @click="addResolution">Add</button>
                   </td>
@@ -207,6 +211,7 @@ interface ComponentData {
   resToAddWidth: number;
   resToAddHeight: number;
   resToAddFps: number;
+  resToAddBitRate: number;
 
   busy: boolean;
 
@@ -252,6 +257,7 @@ export default {
       resToAddWidth: 1024,
       resToAddHeight: 720,
       resToAddFps: 30,
+      resToAddBitRate: 0,
 
       rtmpBase: "",
       wssBase: "",
@@ -381,10 +387,11 @@ export default {
       const width = this.resToAddWidth;
       const height = this.resToAddHeight;
       const fps = this.resToAddFps;
-      const key = width + "x" + height + "-" + fps;
+      const bitRate = this.resToAddBitRate;
+      const key = width + "x" + height + "-" + fps + "~" + bitRate;
 
       for (let res of this.resolutions) {
-        const otherKey = res.width + "x" + res.height + "-" + res.fps;
+        const otherKey = res.width + "x" + res.height + "-" + res.fps + "~" + bitRate;
         if (key === otherKey) {
           return;
         }
@@ -394,14 +401,15 @@ export default {
         width: width,
         height: height,
         fps: fps,
+        bitRate: bitRate,
       });
     },
 
     deleteResolution: function (res: Resolution) {
-      const key = res.width + "x" + res.height + "-" + res.fps;
+      const key = res.width + "x" + res.height + "-" + res.fps + "~" + res.bitRate;
 
       this.resolutions = this.resolutions.filter(r => {
-        const otherKey = r.width + "x" + r.height + "-" + r.fps;
+        const otherKey = r.width + "x" + r.height + "-" + r.fps + "~" + r.bitRate;
         return key !== otherKey;
       });
     },

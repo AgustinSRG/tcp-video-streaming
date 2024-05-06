@@ -78,7 +78,10 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 			// Encode
 
 			cmd.Args = append(cmd.Args, "-vcodec", "libx264", "-acodec", "aac")
-			cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
+
+			if videoWidth%2 != 0 || videoHeight%2 != 0 {
+				cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
+			}
 		}
 		AppendGenericHLSArguments(cmd, Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task)
 	}
@@ -90,8 +93,15 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 		videoFilter := ""
 
-		if resolutions[i].fps >= 0 && resolutions[i].fps != videoFPS {
+		if resolutions[i].fps > 0 && resolutions[i].fps != videoFPS {
 			videoFilter += "fps=" + fmt.Sprint(resolutions[i].fps) + ","
+		}
+
+		if resolutions[i].bitRate > 0 {
+			bufSize := int64(resolutions[i].bitRate) * 2
+
+			cmd.Args = append(cmd.Args, "-bufsize", fmt.Sprint(bufSize)+"k")                // Buffer size
+			cmd.Args = append(cmd.Args, "-maxrate", fmt.Sprint(resolutions[i].bitRate)+"k") // Max bit rate
 		}
 
 		videoFilter += "scale=" + fmt.Sprint(resolutions[i].width) + ":" + fmt.Sprint(resolutions[i].height)

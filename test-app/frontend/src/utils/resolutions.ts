@@ -6,6 +6,7 @@ export interface Resolution {
     width: number;
     height: number;
     fps: number;
+    bitRate: number;
 }
 
 export interface ResolutionList {
@@ -14,11 +15,15 @@ export interface ResolutionList {
 }
 
 export function parseResolution(str: string): Resolution {
-    let parts = str.split("-");
+    let parts = str.split("~");
+    let bitRate = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+
+    parts = (parts[0] + "").toLowerCase().split("-");
     let fps = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
     if (fps <= 0) {
         fps = -1;
     }
+    
     parts = (parts[0] + "").toLowerCase().split("x");
     const width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : 0;
     const height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : 0;
@@ -27,15 +32,22 @@ export function parseResolution(str: string): Resolution {
         width: width,
         height: height,
         fps: fps,
+        bitRate: bitRate,
     };
 }
 
 export function encodeResolution(r: Resolution): string {
-    if (r.fps <= 0) {
-        return r.width + "x" + r.height;
-    } else {
-        return r.width + "x" + r.height + "-" + r.fps;
+    let str = r.width + "x" + r.height;
+
+    if (r.fps > 0) {
+        str += "-" + r.fps
     }
+
+    if (r.bitRate > 0) {
+        str += "~" + r.bitRate
+    }
+
+    return str;
 }
 
 export function parseResolutionList(str: string): ResolutionList{

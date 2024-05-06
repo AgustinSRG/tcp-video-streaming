@@ -18,18 +18,25 @@ type ResolutionList struct {
 
 // Stores a resolution
 type Resolution struct {
-	width  int // Width (px)
-	height int // Height (px)
-	fps    int // Frames per second (Can be -1 meaning original fps)
+	width   int // Width (px)
+	height  int // Height (px)
+	fps     int // Frames per second (Can be -1 meaning original fps)
+	bitRate int // Bitrate limit in kilobits per second (Can be -1 meaning no limit)
 }
 
 // Encodes resolution to string
 func (r *Resolution) Encode() string {
-	if r.fps >= 0 {
-		return fmt.Sprint(r.width) + "x" + fmt.Sprint(r.height) + "-" + fmt.Sprint(r.fps)
-	} else {
-		return fmt.Sprint(r.width) + "x" + fmt.Sprint(r.height)
+	str := fmt.Sprint(r.width) + "x" + fmt.Sprint(r.height)
+
+	if r.fps > 0 {
+		str += "-" + fmt.Sprint(r.fps)
 	}
+
+	if r.bitRate > 0 {
+		str += "~" + fmt.Sprint(r.bitRate)
+	}
+
+	return str
 }
 
 // Encodes a resolution list to string
@@ -55,61 +62,60 @@ func (list *ResolutionList) Encode() string {
 // str - Encoded resolution
 // Returns the decoded resolution
 func DecodeResolution(str string) (resolution Resolution, resErr error) {
-	fpsParts := strings.Split(strings.Trim(str, " "), "-")
+	bitRateParts := strings.Split(strings.TrimSpace(str), "~")
+	bitRate := -1
 
-	if len(fpsParts) == 2 {
-		resParts := strings.Split(fpsParts[0], "x")
+	if len(bitRateParts) == 2 {
+		p, err := strconv.ParseInt(bitRateParts[1], 10, 32)
 
-		if len(resParts) == 2 {
-			width, err := strconv.ParseInt(resParts[0], 10, 32)
-
-			if err != nil {
-				return Resolution{}, err
-			}
-
-			height, err := strconv.ParseInt(resParts[1], 10, 32)
-
-			if err != nil {
-				return Resolution{}, err
-			}
-
-			fps, err := strconv.ParseInt(fpsParts[1], 10, 32)
-
-			if err != nil {
-				return Resolution{}, err
-			}
-
-			return Resolution{
-				width:  int(width),
-				height: int(height),
-				fps:    int(fps),
-			}, nil
+		if err != nil {
+			return Resolution{}, err
 		}
-	} else if len(fpsParts) == 1 {
-		resParts := strings.Split(fpsParts[0], "x")
 
-		if len(resParts) == 2 {
-			width, err := strconv.ParseInt(resParts[0], 10, 32)
-
-			if err != nil {
-				return Resolution{}, err
-			}
-
-			height, err := strconv.ParseInt(resParts[1], 10, 32)
-
-			if err != nil {
-				return Resolution{}, err
-			}
-
-			return Resolution{
-				width:  int(width),
-				height: int(height),
-				fps:    -1,
-			}, nil
-		}
+		bitRate = int(p)
 	}
 
-	return Resolution{}, errors.New("Invalid resolution")
+	str = bitRateParts[0]
+
+	fpsParts := strings.Split(strings.TrimSpace(str), "-")
+	fps := -1
+
+	if len(fpsParts) == 2 {
+		p, err := strconv.ParseInt(fpsParts[1], 10, 32)
+
+		if err != nil {
+			return Resolution{}, err
+		}
+
+		fps = int(p)
+	}
+
+	str = fpsParts[0]
+
+	resParts := strings.Split(str, "x")
+
+	if len(resParts) != 2 {
+		return Resolution{}, errors.New("invalid resolution")
+	}
+
+	width, err := strconv.ParseInt(resParts[0], 10, 32)
+
+	if err != nil {
+		return Resolution{}, err
+	}
+
+	height, err := strconv.ParseInt(resParts[1], 10, 32)
+
+	if err != nil {
+		return Resolution{}, err
+	}
+
+	return Resolution{
+		width:   int(width),
+		height:  int(height),
+		fps:     fps,
+		bitRate: bitRate,
+	}, nil
 }
 
 // Decodes a resolution list
@@ -131,61 +137,21 @@ func DecodeResolutionsList(str string) ResolutionList {
 	list := strings.Split(str, ",")
 
 	for i := 0; i < len(list); i++ {
-		fpsParts := strings.Split(strings.Trim(list[i], " "), "-")
 
-		if len(fpsParts) == 2 {
-			resParts := strings.Split(fpsParts[0], "x")
+		el := list[i]
 
-			if len(resParts) == 2 {
-				width, err := strconv.ParseInt(resParts[0], 10, 32)
-
-				if err != nil {
-					continue
-				}
-
-				height, err := strconv.ParseInt(resParts[1], 10, 32)
-
-				if err != nil {
-					continue
-				}
-
-				fps, err := strconv.ParseInt(fpsParts[1], 10, 32)
-
-				if err != nil {
-					continue
-				}
-
-				resList.resolutions = append(resList.resolutions, Resolution{
-					width:  int(width),
-					height: int(height),
-					fps:    int(fps),
-				})
-			}
-		} else if len(fpsParts) == 1 {
-			resParts := strings.Split(fpsParts[0], "x")
-
-			if len(resParts) == 2 {
-				width, err := strconv.ParseInt(resParts[0], 10, 32)
-
-				if err != nil {
-					continue
-				}
-
-				height, err := strconv.ParseInt(resParts[1], 10, 32)
-
-				if err != nil {
-					continue
-				}
-
-				resList.resolutions = append(resList.resolutions, Resolution{
-					width:  int(width),
-					height: int(height),
-					fps:    -1,
-				})
-			} else if len(resParts) == 1 && strings.ToUpper(resParts[0]) == "ORIGINAL" {
-				resList.hasOriginal = true
-			}
+		if strings.ToUpper(el) == "ORIGINAL" {
+			resList.hasOriginal = true
+			continue
 		}
+
+		r, err := DecodeResolution(el)
+
+		if err != nil {
+			continue
+		}
+
+		resList.resolutions = append(resList.resolutions, r)
 	}
 
 	return resList
@@ -321,9 +287,10 @@ func GetActualResolutionList(originalResolution Resolution, list ResolutionList)
 		}
 
 		finalResolution := Resolution{
-			width:  fitWidth,
-			height: fitHeight,
-			fps:    fitFPS,
+			width:   fitWidth,
+			height:  fitHeight,
+			fps:     fitFPS,
+			bitRate: list.resolutions[i].bitRate,
 		}
 
 		if originalFPS < fitFPS {
@@ -369,9 +336,10 @@ func GetActualResolutionList(originalResolution Resolution, list ResolutionList)
 		return result
 	} else if !list.hasOriginal && smallerResolution != nil {
 		return []Resolution{{
-			width:  smallerResolution.width,
-			height: smallerResolution.height,
-			fps:    smallerResolution.fps,
+			width:   smallerResolution.width,
+			height:  smallerResolution.height,
+			fps:     smallerResolution.fps,
+			bitRate: smallerResolution.bitRate,
 		}}
 	} else {
 		return result

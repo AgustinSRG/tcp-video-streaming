@@ -33,7 +33,7 @@ The API may return with the following headers, in order to customize the stream 
 
  - `x-record` - Set to `true` or `false` to enable or disable stream recording.
  - `x-previews` - Format: `{WIDTH}x{HEIGHT}, {DELAY_SECONDS}` If enabled, the encoder will save a snapshot image of the stream each `DELAY_SECONDS` seconds. Set `Previews: False` to disable it.
- - `x-resolutions` - List of playback resolutions. Format: `{WIDTH}x{HEIGHT}-{FPS}` or `ORIGINAL`. Split by commas. The encoder will check the source resolution and will encode to at least one resolution (the closest one) and every resolution below this one.
+ - `x-resolutions` - List of playback resolutions. Format: `{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}` or `ORIGINAL`. Split by commas. The encoder will check the source resolution and will encode to at least one resolution (the closest one) and every resolution below this one. The bit rate is optional and should be specified in kilobits per second.
 
 ## Event callbacks
 
@@ -47,7 +47,7 @@ The request is a **POST** HTTP request, with an **empty body**, and the followin
  - `x-streaming-id`: Unique identifier of the streaming session.
  - `x-event-type`: Event type. Can be `stream-available` if the streaming session is available for playback, or `stream-closed` if the streaming session has ended.
  - `x-stream-type` - For the `stream-available` event, multiple events with the same streaming ID will be sent for each type and resolution. Type can be `HLS-LIVE`, `HLS-VOD` or `IMG-PREVIEW`.
- - `x-resolution` - For the `stream-available` event, multiple events with the same streaming ID will be sent for each type and resolution. Resolution is formatted as `{WIDTH}x{HEIGHT}-{FPS}`
+ - `x-resolution` - For the `stream-available` event, multiple events with the same streaming ID will be sent for each type and resolution. Resolution is formatted as `{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}`
  - `x-index-file` - Only for `stream-available` event. Full path to the index file in the shared file system. It can be a `m3u8` playlist or a `json` file for the images.
  - `Authorization`: Authorization header, depending on your auth method.
 

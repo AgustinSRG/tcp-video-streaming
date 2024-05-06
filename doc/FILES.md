@@ -13,9 +13,9 @@ Each video stream is encoded in multiple resolutions, each resolution having the
 
 For each resolution, the following files are stored:
 
- - HLS fragments: Each fragment has a number, increasing in order. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}/{Fragment-Number}.ts`
- - HLS live playlist: Playlist to fetch the stream while it's being broadcasted. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}/live.m3u8`
- - HLS VOD playlist: Playlist to fetch the stream as a video on demand. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}/vod-{VOD-INDEX}.m3u8`
+ - HLS fragments: Each fragment has a number, increasing in order. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}/{Fragment-Number}.ts`
+ - HLS live playlist: Playlist to fetch the stream while it's being broadcasted. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}/live.m3u8`
+ - HLS VOD playlist: Playlist to fetch the stream as a video on demand. Path pattern: `hls/{Stream-Channel}/{Stream-ID}/{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}/vod-{VOD-INDEX}.m3u8`
 
 ## Stream preview images
 
