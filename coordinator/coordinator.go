@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"strings"
@@ -23,7 +24,7 @@ type Streaming_Coordinator struct {
 
 	mutex *sync.Mutex // Mutex to access the data
 
-	nextStreamId  uint64      // ID for the next stream
+	nextStreamId  uint32      // ID for the next stream
 	streamIdMutex *sync.Mutex // Mutex to ensure stream IDs are unique
 
 	pendingStreamClosedEvents map[string]*PendingStreamClosedEvent // List of stream closed event being sent
@@ -191,15 +192,21 @@ func (coord *Streaming_Coordinator) ReleaseChannel(channel *StreamingChannel) {
 func (coord *Streaming_Coordinator) GenerateStreamID() string {
 	idBytes := make([]byte, 16)
 
-	binary.LittleEndian.PutUint64(idBytes[0:8], uint64(time.Now().UnixMilli()))
+	binary.BigEndian.PutUint64(idBytes[0:8], uint64(time.Now().UnixMilli()))
 
 	coord.mutex.Lock()
 
 	coord.nextStreamId++
 
-	binary.LittleEndian.PutUint64(idBytes[8:16], coord.nextStreamId)
+	binary.BigEndian.PutUint32(idBytes[8:12], coord.nextStreamId)
 
 	coord.mutex.Unlock()
+
+	_, err := rand.Read(idBytes[12:])
+
+	if err != nil {
+		LogError(err)
+	}
 
 	return strings.ToLower(hex.EncodeToString(idBytes))
 }
