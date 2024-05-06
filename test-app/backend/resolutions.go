@@ -109,7 +109,7 @@ func DecodeResolution(str string) (resolution Resolution, resErr error) {
 		}
 	}
 
-	return Resolution{}, errors.New("Invalid resolution")
+	return Resolution{}, errors.New("invalid resolution")
 }
 
 // Decodes a resolution list

@@ -24,7 +24,7 @@ func InitFileStorage() {
 // subPath - The path inside the file system
 func RemoveFile(subPath string) error {
 	if strings.HasPrefix(subPath, "/") || strings.Contains(subPath, "..") {
-		return errors.New("Insecure path. Cannot write the file.")
+		return errors.New("insecure path. cannot write the file")
 	}
 
 	absolutePath := filepath.Join(FILE_STORAGE_BASE_PATH, subPath)
@@ -36,7 +36,7 @@ func RemoveFile(subPath string) error {
 // subPath - The path inside the file system
 func RemoveFolder(subPath string) error {
 	if strings.HasPrefix(subPath, "/") || strings.Contains(subPath, "..") {
-		return errors.New("Insecure path. Cannot write the file.")
+		return errors.New("insecure path. cannot write the file")
 	}
 
 	absolutePath := filepath.Join(FILE_STORAGE_BASE_PATH, subPath)

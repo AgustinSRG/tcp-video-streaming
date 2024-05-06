@@ -388,3 +388,48 @@ func api_deleteChannel(response http.ResponseWriter, request *http.Request) {
 
 	response.WriteHeader(200)
 }
+
+func api_checkKey(response http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	request.Body = http.MaxBytesReader(response, request.Body, JSON_BODY_MAX_LENGTH)
+
+	var p ChannelActionBody
+
+	err := json.NewDecoder(request.Body).Decode(&p)
+	if err != nil {
+		response.WriteHeader(400)
+		return
+	}
+
+	channel := vars["channel"]
+
+	if !validateStreamIDString(channel) {
+		ReturnAPIError(response, 400, "BAD_REQUEST", "Bad request.")
+		return
+	}
+
+	valid, _, _, _ := DATABASE.VerifyKey(channel, p.Key)
+
+	if !valid {
+		ReturnAPIError(response, 403, "INVALID_KEY", "Access denied")
+		return
+	}
+
+	result := DATABASE.GetChannelStatus(channel)
+
+	if result == nil {
+		ReturnAPIError(response, 404, "NOT_FOUND", "Channel not found.")
+		return
+	}
+
+	jsonResult, err := json.Marshal(result)
+
+	if err != nil {
+		LogError(err)
+
+		ReturnAPIError(response, 500, "INTERNAL_ERROR", "Internal server error, Check the logs for details.")
+		return
+	}
+
+	ReturnAPI_JSON(response, request, jsonResult)
+}

@@ -92,4 +92,14 @@ export class ControlAPI {
             },
         };
     }
+
+    public static CheckKey(channel: string, key: string): RequestParams {
+        return {
+            method: "POST",
+            url: GetAPIURL("/api/control/chan/" + encodeURIComponent(channel) + "/check"),
+            json: {
+                key: key,
+            },
+        };
+    }
 }
