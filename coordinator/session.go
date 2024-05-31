@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -211,18 +212,25 @@ func (session *ControlSession) HandleMessage(msg messages.RPCMessage) {
 // key - The streaming key
 // Returns the URL
 func (session *ControlSession) GeneratePublishSourceURL(channel string, key string) string {
+	externalIp := session.externalIP
+
+	if strings.Contains(externalIp, ":") {
+		// IPV6 should be wrapped
+		externalIp = "[" + externalIp + "]"
+	}
+
 	switch session.sessionType {
 	case SESSION_TYPE_RTMP:
 		if session.usesSSL {
-			return "rtmps://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+			return "rtmps://" + externalIp + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
 		} else {
-			return "rtmp://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+			return "rtmp://" + externalIp + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
 		}
 	case SESSION_TYPE_WSS:
 		if session.usesSSL {
-			return "wss://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+			return "wss://" + externalIp + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
 		} else {
-			return "ws://" + session.externalIP + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
+			return "ws://" + externalIp + ":" + fmt.Sprint(session.externalPort) + "/" + channel + "/" + key
 		}
 	default:
 		return ""
