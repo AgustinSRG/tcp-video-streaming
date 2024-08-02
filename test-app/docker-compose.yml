@@ -38,7 +38,7 @@ services:
       - tcp_video_streaming_test
     ports:
       - 80
-    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    image: asanrom/tcp-video-streaming:latest
     restart: unless-stopped
     command: coordinator
     environment:
@@ -58,7 +58,7 @@ services:
     hostname: hls-encoder
     networks:
       - tcp_video_streaming_test
-    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    image: asanrom/tcp-video-streaming:latest
     restart: unless-stopped
     command: hls-encoder
     volumes:
@@ -77,7 +77,7 @@ services:
       - 1935:1935
     networks:
       - tcp_video_streaming_test
-    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    image: asanrom/tcp-video-streaming:latest
     restart: unless-stopped
     command: rtmp-server
     environment:
@@ -97,7 +97,7 @@ services:
       - 8000:80
     networks:
       - tcp_video_streaming_test
-    image: ghcr.io/agustinsrg/tcp-video-streaming:latest
+    image: asanrom/tcp-video-streaming:latest
     restart: unless-stopped
     command: ws-stream-server
     environment:

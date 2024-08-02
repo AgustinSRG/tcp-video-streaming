@@ -17,7 +17,19 @@ jobs:
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/agustinsrg/tcp-video-streaming:latest --tag ghcr.io/agustinsrg/tcp-video-streaming:${{ env.RELEASE_VERSION }}
+      run: docker build . --file Dockerfile --tag ghcr.io/agustinsrg/tcp-video-streaming:latest --tag ghcr.io/agustinsrg/tcp-video-streaming:${{ env.RELEASE_VERSION }} --tag asanrom/tcp-video-streaming:latest --tag asanrom/tcp-video-streaming:${{ env.RELEASE_VERSION }}
+
+    - name: Docker Login
+      uses: docker/login-action@v2.1.0
+      with:
+        username: asanrom
+        password: ${{ secrets.DOCKER_TOKEN }}
+      
+    - name: Push the Docker image (Current Version)
+      run: docker push asanrom/tcp-video-streaming:${{ env.RELEASE_VERSION }}
+        
+    - name: Push the Docker image (Latest)
+      run: docker push asanrom/tcp-video-streaming:latest
 
     - name: Docker Login (GitHub Packages)
       uses: docker/login-action@v2.1.0
