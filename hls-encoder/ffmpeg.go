@@ -61,7 +61,7 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 	audioStream := probeData.FirstAudioStream()
 
 	if videoStream == nil {
-		return nil, nil, errors.New("The input source does not have a video stream")
+		return nil, nil, errors.New("the input source does not have a video stream")
 	}
 
 	videoWidth := videoStream.Width

@@ -244,7 +244,7 @@ func (task *EncodingTask) SaveLivePlaylist(subStream *SubStreamStatus, data []by
 	dataToWrite := data
 
 	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
+		err := task.server.storage.WriteFileBytes(filePath, dataToWrite)
 
 		if err != nil {
 			LogError(err)
@@ -294,7 +294,7 @@ func (task *EncodingTask) OnLivePlaylistSaved(subStream *SubStreamStatus) {
 func (task *EncodingTask) RemoveFragments(subStream *SubStreamStatus, fromIndex int, toIndex int) {
 	for i := fromIndex; i < toIndex; i++ {
 		filePath := "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/" + fmt.Sprint(i) + ".ts"
-		err := RemoveFile(filePath)
+		err := task.server.storage.RemoveFile(filePath)
 		if err != nil {
 			task.debug("Could not remove file: " + filePath + " | Error: " + err.Error())
 		} else {
@@ -313,7 +313,7 @@ func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byt
 	dataToWrite := data
 
 	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
+		err := task.server.storage.WriteFileBytes(filePath, dataToWrite)
 
 		if err != nil {
 			LogError(err)

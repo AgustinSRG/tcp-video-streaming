@@ -15,6 +15,8 @@ import (
 type HLS_Encoder_Server struct {
 	websocketControlConnection *ControlServerConnection // Connection to the coordinator server
 
+	storage FileStorageSystem // File storage system
+
 	capacity int // Server capacity
 	load     int // Server load
 

@@ -137,7 +137,7 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_TS(w http.ResponseWriter, req
 
 	fragmentPath := "hls/" + task.channel + "/" + task.streamId + "/" + resolution.Encode() + "/" + file
 
-	err = WriteFile(fragmentPath, req.Body)
+	err = server.storage.WriteFile(fragmentPath, req.Body)
 
 	if err != nil {
 		LogError(err)
@@ -196,7 +196,7 @@ func (server *HLS_Encoder_Server) HandleRequestImagePreview(w http.ResponseWrite
 
 	previewPath := "img-preview/" + channel + "/" + streamId + "/" + config.Encode("-") + "/" + file
 
-	err = WriteFile(previewPath, req.Body)
+	err = server.storage.WriteFile(previewPath, req.Body)
 
 	if err != nil {
 		LogError(err)
