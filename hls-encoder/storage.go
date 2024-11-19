@@ -36,6 +36,8 @@ func CreateFileStorageSystem() (FileStorageSystem, error) {
 	case "HTTP":
 	case "HTTPS":
 		return CreateFileStorageHttp()
+	case "S3":
+		return CreateFileStorageAwsS3()
 	}
 
 	return nil, errors.New("unknown storage type: " + storageType)
