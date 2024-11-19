@@ -38,25 +38,59 @@ You can configure the server with environment variables.
 
 You can configure the storage system where the HLS files will be stored by changing the variable `HLS_STORAGE_TYPE`.
 
-- `FILESYSTEM` - Store the files in a folder specified in `HLS_FILESYSTEM_PATH`
-- `HTTP` - Send HTTP requests to store the files. The request method is either `PUT` or `DELETE` The request path is the route of the file. The request body is the contents of the file.
-- `S3` - Store files in AWS S3
-- `AZURE_BLOB_STORAGE` - Store files in Azure Blob Storage
+| Variable Name    | Description                              |
+| ---------------- | ---------------------------------------- |
+| HLS_STORAGE_TYPE | HLS Storage type. Default: `FILESYSTEM`. |
 
-| Variable Name           | Description                                                                             |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| HLS_STORAGE_TYPE        | HLS Storage type. Default: `FILESYSTEM`.                                                |
-| HLS_FILESYSTEM_PATH     | Path where the HLS files will be stored. It may be a remote or distributed file system. |
-| HLS_STORAGE_HTTP_URL    | Base URL to send the PUT requests.                                                      |
-| AWS_REGION              | Name of the AWS region (when storing files in AWS S3).                                  |
-| AWS_S3_BUCKET           | Name of the AWS S3 bucket (when storing files in AWS S3).                               |
-| AWS_ACCESS_KEY_ID       | AWS access key ID (when storing files in AWS S3).                                       |
-| AWS_SECRET_ACCESS_KEY   | AWS secret access key (when storing files in AWS S3).                                   |
-| AZURE_STORAGE_ACCOUNT   | ID of the storage account (when storing files in Azure Blob Storage).                   |
-| AZURE_STORAGE_CONTAINER | Name of the storage container (when storing files in Azure Blob Storage).               |
-| AZURE_TENANT_ID         | Azure tenant ID (when storing files in Azure Blob Storage).                             |
-| AZURE_CLIENT_ID         | Azure client ID (when storing files in Azure Blob Storage).                             |
-| AZURE_CLIENT_SECRET     | Azure client secret (when storing files in Azure Blob Storage).                         |
+### Storage (File system)
+
+Set `HLS_STORAGE_TYPE` to `FILESYSTEM` in order to store the files in a folder specified by `HLS_FILESYSTEM_PATH`.
+
+| Variable Name       | Description                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| HLS_FILESYSTEM_PATH | Path where the HLS files will be stored. It may be a remote or distributed file system. |
+
+### Storage (HTTP)
+
+Set `HLS_STORAGE_TYPE` to `HTTP` in order to send HTTP requests to store the files.
+
+The request method is either `PUT` (to save a file) or `DELETE` (to delete a file).
+
+The request path is the route of the file.
+
+The request body is the contents of the file (only for `PUT` requests).
+
+| Variable Name                | Description                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| HLS_STORAGE_HTTP_URL         | Base URL to send the HTTP requests.                                                                           |
+| HLS_STORAGE_HTTP_AUTH        | Authorization type for HTTP request. Leave empty for no authentication. Can be: `Basic`, `Bearer` or `Custom` |
+| HLS_STORAGE_HTTP_USER        | Authorization user (`Basic`)                                                                                  |
+| HLS_STORAGE_HTTP_PASSWORD    | Authorization password (`Basic`)                                                                              |
+| HLS_STORAGE_HTTP_TOKEN       | Authorization bearer token (`Bearer`)                                                                         |
+| HLS_STORAGE_HTTP_AUTH_CUSTOM | Custom value of the `Authorization` header (`Custom`)                                                         |
+
+### Storage (AWS S3)
+
+Set `HLS_STORAGE_TYPE` to `S3` in order to store files in AWS S3.
+
+| Variable Name         | Description                |
+| --------------------- | -------------------------- |
+| AWS_REGION            | Name of the AWS region.    |
+| AWS_S3_BUCKET         | Name of the AWS S3 bucket. |
+| AWS_ACCESS_KEY_ID     | AWS access key ID.         |
+| AWS_SECRET_ACCESS_KEY | AWS secret access key.     |
+
+### Storage (Azure Blob Storage)
+
+Set `HLS_STORAGE_TYPE` to `AZURE_BLOB_STORAGE` in order to store files in Azure Blob Storage
+
+| Variable Name           | Description                    |
+| ----------------------- | ------------------------------ |
+| AZURE_STORAGE_ACCOUNT   | ID of the storage account.     |
+| AZURE_STORAGE_CONTAINER | Name of the storage container. |
+| AZURE_TENANT_ID         | Azure tenant ID.               |
+| AZURE_CLIENT_ID         | Azure client ID.               |
+| AZURE_CLIENT_SECRET     | Azure client secret.           |
 
 ### FFMPEG
 

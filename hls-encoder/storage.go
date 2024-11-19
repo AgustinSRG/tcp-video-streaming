@@ -13,7 +13,7 @@ type FileStorageSystem interface {
 	// Write a file to the HLS storage
 	// subPath - The path inside the file system
 	// data - Data to write
-	WriteFile(subPath string, data io.ReadCloser) error
+	WriteFile(subPath string, data io.Reader) error
 
 	// Write a file to the HLS storage
 	// subPath - The path inside the file system
@@ -33,6 +33,9 @@ func CreateFileStorageSystem() (FileStorageSystem, error) {
 	case "":
 	case "FILESYSTEM":
 		return CreateFileStorageFileSystem()
+	case "HTTP":
+	case "HTTPS":
+		return CreateFileStorageHttp()
 	}
 
 	return nil, errors.New("unknown storage type: " + storageType)

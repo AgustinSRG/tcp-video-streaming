@@ -17,6 +17,7 @@ const (
 
 // File system storage
 type FileStorageFileSystem struct {
+	// Folder path
 	path string
 }
 
@@ -36,7 +37,7 @@ func CreateFileStorageFileSystem() (*FileStorageFileSystem, error) {
 // Write a file to the HLS storage
 // subPath - The path inside the file system
 // data - Data to write
-func (fs *FileStorageFileSystem) WriteFile(subPath string, data io.ReadCloser) error {
+func (fs *FileStorageFileSystem) WriteFile(subPath string, data io.Reader) error {
 	if strings.HasPrefix(subPath, "/") || strings.Contains(subPath, "..") {
 		return errors.New("insecure path: cannot write the file")
 	}

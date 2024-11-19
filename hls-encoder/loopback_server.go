@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -87,7 +87,7 @@ func (server *HLS_Encoder_Server) HandleRequestHLS(w http.ResponseWriter, req *h
 func (server *HLS_Encoder_Server) HandleRequestHLS_M3U8(w http.ResponseWriter, req *http.Request, task *EncodingTask, resolution Resolution, file string) {
 	// Read the body
 
-	bodyData, err := ioutil.ReadAll(req.Body)
+	bodyData, err := io.ReadAll(req.Body)
 
 	if err != nil {
 		LogError(err)
