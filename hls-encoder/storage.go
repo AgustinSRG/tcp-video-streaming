@@ -30,15 +30,15 @@ func CreateFileStorageSystem() (FileStorageSystem, error) {
 	storageType := os.Getenv("HLS_STORAGE_TYPE")
 
 	switch storageType {
-	case "":
-	case "FILESYSTEM":
+	case "", "FILESYSTEM":
 		return CreateFileStorageFileSystem()
-	case "HTTP":
-	case "HTTPS":
+	case "HTTP", "HTTPS":
 		return CreateFileStorageHttp()
 	case "S3":
 		return CreateFileStorageAwsS3()
+	case "AZ", "AZURE", "AZURE_BLOB_STORAGE":
+		return NewFileStorageAzureBlobStorage()
+	default:
+		return nil, errors.New("unknown storage type: " + storageType)
 	}
-
-	return nil, errors.New("unknown storage type: " + storageType)
 }

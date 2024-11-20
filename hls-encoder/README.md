@@ -82,7 +82,7 @@ Set `HLS_STORAGE_TYPE` to `S3` in order to store files in AWS S3.
 
 ### Storage (Azure Blob Storage)
 
-Set `HLS_STORAGE_TYPE` to `AZURE_BLOB_STORAGE` in order to store files in Azure Blob Storage
+Set `HLS_STORAGE_TYPE` to `AZ` in order to store files in Azure Blob Storage
 
 | Variable Name           | Description                    |
 | ----------------------- | ------------------------------ |
