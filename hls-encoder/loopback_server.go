@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -137,7 +138,16 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_TS(w http.ResponseWriter, req
 
 	fragmentPath := "hls/" + task.channel + "/" + task.streamId + "/" + resolution.Encode() + "/" + file
 
-	err = server.storage.WriteFile(fragmentPath, req.Body)
+	fragmentData, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		LogError(err)
+		w.WriteHeader(400)
+		fmt.Fprintf(w, "Could not read request body.")
+		return
+	}
+
+	err = server.storage.WriteFile(fragmentPath, bytes.NewReader(fragmentData))
 
 	if err != nil {
 		LogError(err)
@@ -148,7 +158,7 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_TS(w http.ResponseWriter, req
 
 	// Notice the task that the preview image is ready
 
-	task.OnFragmentReady(resolution, fileIndex)
+	task.OnFragmentReady(resolution, fileIndex, fragmentData)
 
 	w.WriteHeader(200)
 }

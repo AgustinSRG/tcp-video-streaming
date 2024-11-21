@@ -58,6 +58,9 @@ type SubStreamStatus struct {
 	liveWritePending      bool          // True if the live playlist is pending of being written
 	liveWriteData         []byte        // Data to write to the live playlist
 
+	cdnPublisher      *CdnPublisher // CDN publisher
+	cdnPublisherReady bool          // CDN publisher ready
+
 	vodPlaylist          *HLS_PlayList  // VOD playlist
 	vodPlaylistAvailable bool           // True if the current VOD playlist is available
 	vodIndex             int            // VOD index
@@ -103,6 +106,10 @@ func (task *EncodingTask) OnEncodingEnded() {
 	// For each resolution, set the live playlist to ended and save it
 
 	for _, subStream := range task.subStreams {
+		if subStream.cdnPublisher != nil {
+			subStream.cdnPublisher.Close()
+		}
+
 		if subStream.livePlaylist == nil {
 			continue
 		}

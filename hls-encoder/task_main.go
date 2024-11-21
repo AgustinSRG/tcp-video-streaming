@@ -23,6 +23,8 @@ func (task *EncodingTask) Run() {
 		task.log("Task ended.")
 		// Announce closed
 		task.server.websocketControlConnection.SendStreamClosed(task.channel, task.streamId)
+		// Clear CDN connections
+		task.CloseCdnConnections()
 		// Remove task
 		task.server.RemoveTask(task.channel, task.streamId)
 	}()

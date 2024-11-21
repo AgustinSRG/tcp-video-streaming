@@ -92,6 +92,22 @@ Set `HLS_STORAGE_TYPE` to `AZ` in order to store files in Azure Blob Storage
 | AZURE_CLIENT_ID         | Azure client ID.               |
 | AZURE_CLIENT_SECRET     | Azure client secret.           |
 
+### HLS websocket CDN
+
+Settings to publish the live HLS streams to [HLS Websocket CDN](https://github.com/AgustinSRG/hls-websocket-cdn).
+
+| Variable Name          | Description                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| HLS_WS_CDN_ENABLED     | Set to `YES` or `NO`. Set it to `YES` if the encoder must publish the stream to the CDN.          |
+| HLS_WS_CDN_URL         | Websocket URL of the CDN server. You can specify multiple servers, separating the URLs by spaces. |
+| HLS_WS_CDN_PUSH_SECRET | Secret to authenticate the PUSH requests to the CDN server.                                       |
+
+The stream IDs for the CDN will be the index files. Example:
+
+```
+hls/channel-id/stream-id/800x600-30~1000/live.m3u8
+```
+
 ### FFMPEG
 
 If the `ffmpeg` and `ffprobe` binaries are not in `/usr/bin`, you must specify its location:

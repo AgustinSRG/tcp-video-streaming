@@ -17,6 +17,8 @@ type HLS_Encoder_Server struct {
 
 	storage FileStorageSystem // File storage system
 
+	cdnPublishController *CdnPublishController // Reference to the CDN publish controller
+
 	capacity int // Server capacity
 	load     int // Server load
 
@@ -56,6 +58,8 @@ func (server *HLS_Encoder_Server) Initialize() {
 	server.tasks = make(map[string]*EncodingTask)
 
 	server.websocketControlConnection = &ControlServerConnection{}
+
+	server.cdnPublishController = NewCdnPublishController()
 }
 
 // Starts all services
