@@ -81,7 +81,10 @@ func (pc *CdnPublishController) IsEnabled() bool {
 const CDN_SERVER_ERROR_WAIT_TIME = 10 * 1000
 
 // Gets the URL of a CDN server
-func (pc *CdnPublishController) GetServerUrl() string {
+func (pc *CdnPublishController) GetServerUrl() (string, *CdnServer) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+
 	availableServerList := make([]*CdnServer, 0)
 
 	now := time.Now().UnixMilli()
@@ -93,23 +96,33 @@ func (pc *CdnPublishController) GetServerUrl() string {
 	}
 
 	if len(availableServerList) == 1 {
-		return availableServerList[1].url
+		return availableServerList[1].url, availableServerList[1]
 	} else if len(availableServerList) > 1 {
 		i := rand.IntN(len(availableServerList))
-		return availableServerList[i].url
+		return availableServerList[i].url, availableServerList[1]
 	}
 
 	url := ""
 	lastErrorTime := now
+	var serverRef *CdnServer = nil
 
 	for _, s := range pc.servers {
 		if s.lastTimeError < lastErrorTime {
 			url = s.url
 			lastErrorTime = s.lastTimeError
+			serverRef = &s
 		}
 	}
 
-	return url
+	return url, serverRef
+}
+
+// Reports server failure
+func (pc *CdnPublishController) ReportServerFailure(s *CdnServer) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+
+	s.lastTimeError = time.Now().Unix()
 }
 
 // Gets the authentication token for pushing the stream
@@ -389,7 +402,7 @@ const TEXT_MSG_READ_LIMIT = 1600
 // Runs the publisher
 func (pub *CdnPublisher) Run() {
 	for !pub.IsClosed() {
-		url := pub.controller.GetServerUrl()
+		url, serverRef := pub.controller.GetServerUrl()
 
 		socket, _, err := websocket.DefaultDialer.Dial(url, nil)
 
@@ -399,6 +412,11 @@ func (pub *CdnPublisher) Run() {
 
 		if err != nil {
 			pub.log("Could not connect to " + url + " | " + err.Error())
+
+			if serverRef != nil {
+				pub.controller.ReportServerFailure(serverRef)
+			}
+
 			time.Sleep(1 * time.Second) // Wait a second to try again
 			continue
 		}
@@ -453,6 +471,9 @@ func (pub *CdnPublisher) Run() {
 			switch parsedMessage.MessageType {
 			case "E":
 				pub.log("Error from CDN. Code: " + parsedMessage.GetParameter("code") + ", Message: " + parsedMessage.GetParameter("message"))
+				if serverRef != nil {
+					pub.controller.ReportServerFailure(serverRef)
+				}
 			case "OK":
 				// Ready
 				pub.Ready()
