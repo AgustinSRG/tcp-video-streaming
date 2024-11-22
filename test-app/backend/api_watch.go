@@ -21,7 +21,7 @@ type ChannelStatusResponse struct {
 
 	LiveStartTimestamp int64 `json:"liveStartTimestamp"`
 
-	LiveSubStreams []SubStream `json:"liveSubStreams"`
+	LiveSubStreams []SubStreamWithCdn `json:"liveSubStreams"`
 }
 
 func api_getChannelStatus(response http.ResponseWriter, request *http.Request) {
