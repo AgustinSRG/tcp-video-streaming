@@ -17,11 +17,16 @@
           <input v-model="preferCdn" type="checkbox" value="prefer-cdn">
           <label>Use HLS Websocket CDN?</label>
         </div>
+        <div class="form-group" v-if="live">
+          <select class="form-control" v-model="latency">
+            <option v-for="l in latencies" :key="l" :value="l">Max latency: {{ l }} seconds</option>
+          </select>
+        </div>
         <div class="" v-if="isCdn">
-          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream"></HLSWebsocketPlayer>
+          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency"></HLSWebsocketPlayer>
         </div>
         <div class="" v-else>
-          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)"></HLSPlayer>
+          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency"></HLSPlayer>
         </div>
       </div>
 
@@ -71,6 +76,8 @@ interface ComponentData {
   cdnUrl: string,
   cdnAuth: string,
 
+  latency: number,
+
   vods: VODItem[];
 }
 
@@ -86,6 +93,7 @@ export default {
   setup: function () {
     return {
       tickTimer: 0,
+      latencies: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
     };
   },
   data: function (): ComponentData {
@@ -105,6 +113,8 @@ export default {
       isCdn: false,
       cdnAuth: "",
       cdnUrl: "",
+
+      latency: 10,
 
       vods: [],
     };

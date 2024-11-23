@@ -12,6 +12,7 @@ export default {
   name: "HLSPlayer",
   props: {
     url: String,
+    latency: Number,
   },
   setup: function () {
     return {
@@ -31,7 +32,7 @@ export default {
       }
 
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: false });
+        const hls = new Hls({ enableWorker: false, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
         this.hls = hls;
         hls.loadSource(this.url);
         hls.attachMedia(video);
@@ -67,6 +68,10 @@ export default {
   },
   watch: {
     url: function () {
+      this.clear();
+      this.load();
+    },
+    latency: function () {
       this.clear();
       this.load();
     },

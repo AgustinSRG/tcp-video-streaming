@@ -14,6 +14,7 @@ export default {
     cdnUrl: String,
     cdnAuth: String,
     streamId: String,
+    latency: Number,
   },
   setup: function () {
     return {
@@ -41,7 +42,7 @@ export default {
         authToken: this.cdnAuth,
         streamId: this.streamId,
         debug: true,
-      }, { enableWorker: false, debug: true });
+      }, { enableWorker: false, debug: true, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
       this.hls = hls;
       hls.start();
       hls.attachMedia(video);
@@ -74,6 +75,10 @@ export default {
   },
   watch: {
     streamId: function () {
+      this.clear();
+      this.load();
+    },
+    latency: function () {
       this.clear();
       this.load();
     },
