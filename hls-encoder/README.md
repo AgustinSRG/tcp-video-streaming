@@ -123,6 +123,8 @@ Additional configuration for HLS
 
 | Variable Name            | Description                                                                                                                            |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| HLS_VIDEO_CODEC          | Video codec to use to encode HLS fragments. Default: `libx264`. Check [FFmpeg codecs](https://www.ffmpeg.org/ffmpeg-codecs.html).      |
+| HLS_AUDIO_CODEC          | Audio codec to use to encode HLS fragments. Default: `aac`. Check [FFmpeg codecs](https://www.ffmpeg.org/ffmpeg-codecs.html).          |
 | HLS_TIME_SECONDS         | Duration (seconds) of each video fragment (by default 3 seconds).                                                                      |
 | HLS_LIVE_PLAYLIST_SIZE   | Max number of fragments in the live playlist (10 by default)                                                                           |
 | HLS_VOD_MAX_SIZE         | Max number of fragments to include in a single VOD playlist. Default value: `86400`                                                    |

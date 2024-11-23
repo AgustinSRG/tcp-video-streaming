@@ -16,7 +16,29 @@ const (
 	HLS_DEFAULT_SEGMENT_TIME    = 3
 	DEFAULT_VOD_FRAGMENTS_LIMIT = 86400    // Max number of fragments allowed in a VOD playlist
 	DEFAULT_FRAGMENTS_LIMIT     = 16777216 // Default limit of fragments for a single stream
+	HLS_DEFAULT_VIDEO_CODEC     = "libx264"
+	HLS_DEFAULT_AUDIO_CODEC     = "aac"
 )
+
+// Returns the configured HLS video codec
+func GetConfiguredVideoCodec() string {
+	codec := os.Getenv("HLS_VIDEO_CODEC")
+	if codec != "" {
+		return codec
+	} else {
+		return HLS_DEFAULT_VIDEO_CODEC
+	}
+}
+
+// Returns the configured HLS audio codec
+func GetConfiguredAudioCodec() string {
+	codec := os.Getenv("HLS_AUDIO_CODEC")
+	if codec != "" {
+		return codec
+	} else {
+		return HLS_DEFAULT_AUDIO_CODEC
+	}
+}
 
 // Returns the configured HLS segment time
 func GetConfiguredHLSTime() int {
