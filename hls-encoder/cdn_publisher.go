@@ -203,7 +203,7 @@ func (controller *CdnPublishController) CreateCdnPublisher(task *EncodingTask, s
 		socket:                    nil,
 		closed:                    false,
 		ready:                     false,
-		heartbeatInterruptChannel: make(chan bool),
+		heartbeatInterruptChannel: make(chan bool, 1),
 	}
 
 	return publisher
@@ -439,6 +439,8 @@ func (pub *CdnPublisher) Run() {
 
 		pub.OnConnected(socket)
 
+		var closedWithError = false
+
 		// Read incoming messages
 
 		for !pub.IsClosed() {
@@ -471,9 +473,7 @@ func (pub *CdnPublisher) Run() {
 			switch parsedMessage.MessageType {
 			case "E":
 				pub.log("Error from CDN. Code: " + parsedMessage.GetParameter("code") + ", Message: " + parsedMessage.GetParameter("message"))
-				if serverRef != nil {
-					pub.controller.ReportServerFailure(serverRef)
-				}
+				closedWithError = true
 			case "OK":
 				// Ready
 				pub.Ready()
@@ -482,5 +482,10 @@ func (pub *CdnPublisher) Run() {
 		}
 
 		pub.OnDisconnected()
+
+		if closedWithError && serverRef != nil {
+			pub.controller.ReportServerFailure(serverRef)
+			time.Sleep(1 * time.Second) // Wait a second to try again
+		}
 	}
 }
