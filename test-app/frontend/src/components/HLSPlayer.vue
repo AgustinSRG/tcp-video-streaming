@@ -1,6 +1,6 @@
 <template>
   <div class="hls-player">
-    <video controls></video>
+    <video controls @ended="onEnded"></video>
   </div>
 </template>
 
@@ -14,6 +14,7 @@ export default {
     url: String,
     latency: Number,
   },
+  emits: ['ended'],
   setup: function () {
     return {
       hls: null as Hls | null,
@@ -58,7 +59,11 @@ export default {
       video.pause();
       video.removeAttribute('src'); // empty source
       video.load();
-    }
+    },
+
+    onEnded: function () {
+      this.$emit("ended");
+    },
   },
   mounted: function () {
     this.load();

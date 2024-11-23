@@ -23,10 +23,10 @@
           </select>
         </div>
         <div class="" v-if="isCdn">
-          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency"></HLSWebsocketPlayer>
+          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency" @ended="onEnded"></HLSWebsocketPlayer>
         </div>
         <div class="" v-else>
-          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency"></HLSPlayer>
+          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency" @ended="onEnded"></HLSPlayer>
         </div>
       </div>
 
@@ -78,6 +78,8 @@ interface ComponentData {
 
   latency: number,
 
+  waitingForEnd: boolean,
+
   vods: VODItem[];
 }
 
@@ -93,7 +95,7 @@ export default {
   setup: function () {
     return {
       tickTimer: 0,
-      latencies: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+      latencies: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
     };
   },
   data: function (): ComponentData {
@@ -117,6 +119,8 @@ export default {
       latency: 10,
 
       vods: [],
+
+      waitingForEnd: false,
     };
   },
   methods: {
@@ -225,23 +229,30 @@ export default {
       )
         .onSuccess((result: ChannelStatus) => {
           this.found = true;
-          this.live = result.live;
-          this.liveStartTimestamp = result.liveStartTimestamp;
-          this.liveSubStreams = result.liveSubStreams.sort((a, b) => {
-            const aSize = a.width * a.height;
-            const bSize = b.width * b.height;
 
-            if (aSize > bSize) {
-              return -1;
-            } else if (bSize > aSize) {
-              return 1;
-            } else if (a.fps > b.fps) {
-              return -1;
-            } else {
-              return 1;
-            }
-          });
-          this.autoSelectLiveStream();
+          if (this.live && !result.live) {
+            this.waitingForEnd = true;
+          } else {
+            this.waitingForEnd = false;
+            this.live = result.live;
+            this.liveStartTimestamp = result.liveStartTimestamp;
+            this.liveSubStreams = result.liveSubStreams.sort((a, b) => {
+              const aSize = a.width * a.height;
+              const bSize = b.width * b.height;
+
+              if (aSize > bSize) {
+                return -1;
+              } else if (bSize > aSize) {
+                return 1;
+              } else if (a.fps > b.fps) {
+                return -1;
+              } else {
+                return 1;
+              }
+            });
+            this.autoSelectLiveStream();
+          }
+
           Timeouts.Set("load-channel-status-watch", 5000, this.loadChannelStatus.bind(this));
         })
         .onRequestError((err) => {
@@ -291,6 +302,16 @@ export default {
           console.error(err);
           Timeouts.Set("load-channel-vods-watch", 2000, this.loadChannelVODList.bind(this));
         });
+    },
+
+    onEnded: function () {
+      if (!this.waitingForEnd) {
+        return;
+      }
+
+      this.waitingForEnd = false;
+      this.live = false;
+      this.liveSubStreams = [];
     },
   },
   mounted: function () {
