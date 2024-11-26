@@ -121,14 +121,24 @@ If the `ffmpeg` and `ffprobe` binaries are not in `/usr/bin`, you must specify i
 
 Additional configuration for HLS
 
-| Variable Name            | Description                                                                                                                            |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| HLS_VIDEO_CODEC          | Video codec to use to encode HLS fragments. Default: `libx264`. Check [FFmpeg codecs](https://www.ffmpeg.org/ffmpeg-codecs.html).      |
-| HLS_AUDIO_CODEC          | Audio codec to use to encode HLS fragments. Default: `aac`. Check [FFmpeg codecs](https://www.ffmpeg.org/ffmpeg-codecs.html).          |
-| HLS_TIME_SECONDS         | Duration (seconds) of each video fragment (by default 3 seconds).                                                                      |
-| HLS_LIVE_PLAYLIST_SIZE   | Max number of fragments in the live playlist (10 by default)                                                                           |
-| HLS_VOD_MAX_SIZE         | Max number of fragments to include in a single VOD playlist. Default value: `86400`                                                    |
-| HLS_FRAGMENT_COUNT_LIMIT | Max number of fragments to allow in a single stream. After this limit is reached, the stream will be closed. Default value: `16777216` |
+| Variable Name            | Description                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| HLS_VIDEO_CODEC          | Video codec to use to encode HLS fragments. Default: `libx264`.                                                       |
+| HLS_AUDIO_CODEC          | Audio codec to use to encode HLS fragments. Default: `aac`.                                                           |
+| HLS_TIME_SECONDS         | Duration (seconds) of each video fragment (by default 3 seconds).                                                     |
+| HLS_LIVE_PLAYLIST_SIZE   | Max number of fragments in the live playlist (10 by default)                                                          |
+| HLS_VOD_MAX_SIZE         | Max number of fragments to include in a single VOD playlist. Default value: `86400`                                   |
+| HLS_FRAGMENT_COUNT_LIMIT | Max number of fragments to allow in a single stream. If reached, the stream will be closed. Default value: `16777216` |
+| HLS_H264_PRESET          | Preset for H.264 codec. Default: `veryfast`. [Documentation](https://trac.ffmpeg.org/wiki/Encode/H.264#Preset).       |
+
+Fully supported options for `HLS_VIDEO_CODEC`:
+
+- `libx264` - Uses default H.264 codec with the CPU. Check the available presets with `ffmpeg -h encoder=libx264`.
+- `h264_nvenc` - Uses NVIDIA custom codec for H.264. Requires a GPU. Check the available presets with `ffmpeg -h encoder=h264_nvenc`.
+
+Fully supported options for `HLS_AUDIO_CODEC`:
+
+- `aac` - Uses the AAC (Advanced Audio Coding) codec for the audio.
 
 ### More options
 

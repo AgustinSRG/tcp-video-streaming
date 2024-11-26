@@ -11,13 +11,17 @@ import (
 )
 
 const (
-	HLS_INTERNAL_PLAYLIST_SIZE  = 5
-	HLS_DEFAULT_PLAYLIST_SIZE   = 10
-	HLS_DEFAULT_SEGMENT_TIME    = 3
-	DEFAULT_VOD_FRAGMENTS_LIMIT = 86400    // Max number of fragments allowed in a VOD playlist
-	DEFAULT_FRAGMENTS_LIMIT     = 16777216 // Default limit of fragments for a single stream
-	HLS_DEFAULT_VIDEO_CODEC     = "libx264"
-	HLS_DEFAULT_AUDIO_CODEC     = "aac"
+	HLS_INTERNAL_PLAYLIST_SIZE    = 5
+	HLS_DEFAULT_PLAYLIST_SIZE     = 10
+	HLS_DEFAULT_SEGMENT_TIME      = 3
+	DEFAULT_VOD_FRAGMENTS_LIMIT   = 86400    // Max number of fragments allowed in a VOD playlist
+	DEFAULT_FRAGMENTS_LIMIT       = 16777216 // Default limit of fragments for a single stream
+	CODEC_H264                    = "libx264"
+	CODEC_H264_NVENC              = "h264_nvenc"
+	HLS_DEFAULT_VIDEO_CODEC       = CODEC_H264
+	HLS_DEFAULT_AUDIO_CODEC       = "aac"
+	HLS_H264_DEFAULT_PRESET       = "veryfast"
+	HLS_H264_NVENC_DEFAULT_PRESET = "fast"
 )
 
 // Returns the configured HLS video codec
@@ -37,6 +41,19 @@ func GetConfiguredAudioCodec() string {
 		return codec
 	} else {
 		return HLS_DEFAULT_AUDIO_CODEC
+	}
+}
+
+// Returns the configured HLS video codec
+func GetH264Preset() string {
+	videoCodec := GetConfiguredVideoCodec()
+	preset := os.Getenv("HLS_H264_PRESET")
+	if preset != "" {
+		return preset
+	} else if videoCodec == CODEC_H264_NVENC {
+		return HLS_H264_NVENC_DEFAULT_PRESET
+	} else {
+		return HLS_H264_DEFAULT_PRESET
 	}
 }
 
@@ -113,7 +130,10 @@ func AppendGenericHLSArguments(cmd *exec.Cmd, resolution Resolution, task *Encod
 	cmd.Args = append(cmd.Args, "-f", "hls")
 
 	// Force key frames so we can cut each second
-	cmd.Args = append(cmd.Args, "-force_key_frames", "expr:gte(t,n_forced*1)")
+	if task.server.hlsVideoCodec == CODEC_H264_NVENC {
+		cmd.Args = append(cmd.Args, "-forced-idr", "1")
+	}
+	cmd.Args = append(cmd.Args, "-force_key_frames", "expr:gte(t,n_forced*"+fmt.Sprint(task.server.hlsTargetDuration)+")")
 
 	// Set HLS options
 	cmd.Args = append(cmd.Args, "-hls_list_size", fmt.Sprint(HLS_INTERNAL_PLAYLIST_SIZE))

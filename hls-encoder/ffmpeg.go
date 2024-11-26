@@ -49,6 +49,10 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 	cmd.Args = append(cmd.Args, "-y") // Overwrite
 
+	if task.server.hlsVideoCodec == CODEC_H264_NVENC {
+		cmd.Args = append(cmd.Args, "-vsync", "0", "-hwaccel", "cuda") // NVIDIA hardware acceleration
+	}
+
 	// Add input source
 
 	sourceManager, err := PrepareEncodingProcessToReceiveSource(cmd, task.sourceType, task.sourceURI)
@@ -73,6 +77,10 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 		cmd.Args = append(cmd.Args, "-vcodec", task.server.hlsVideoCodec, "-acodec", task.server.hlsAudioCodec)
 
+		if task.server.hlsVideoCodec == CODEC_H264 || task.server.hlsVideoCodec == CODEC_H264_NVENC {
+			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
+		}
+
 		if videoWidth%2 != 0 || videoHeight%2 != 0 {
 			cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
 		}
@@ -84,6 +92,10 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 	resolutions := GetActualResolutionList(Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task.resolutions)
 	for i := 0; i < len(resolutions); i++ {
 		cmd.Args = append(cmd.Args, "-vcodec", task.server.hlsVideoCodec, "-acodec", task.server.hlsAudioCodec)
+
+		if task.server.hlsVideoCodec == CODEC_H264 {
+			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
+		}
 
 		videoFilter := ""
 
