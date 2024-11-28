@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -103,27 +104,59 @@ func (server *Streaming_Coordinator_Server) runHTTPSecureServer(wg *sync.WaitGro
 	bind_addr := os.Getenv("BIND_ADDRESS")
 
 	// Setup HTTPS server
-	var ssl_port int
-	ssl_port = 443
+	var port int
+	port = 443
 	customSSLPort := os.Getenv("SSL_PORT")
 	if customSSLPort != "" {
 		sslp, e := strconv.Atoi(customSSLPort)
 		if e == nil {
-			ssl_port = sslp
+			port = sslp
 		}
 	}
 
 	certFile := os.Getenv("SSL_CERT")
 	keyFile := os.Getenv("SSL_KEY")
 
-	if certFile != "" && keyFile != "" {
-		// Listen
-		LogInfo("[SSL] Listening on " + bind_addr + ":" + strconv.Itoa(ssl_port))
-		errSSL := http.ListenAndServeTLS(bind_addr+":"+strconv.Itoa(ssl_port), certFile, keyFile, server)
+	if certFile == "" || keyFile == "" {
+		return
+	}
 
-		if errSSL != nil {
-			LogError(errSSL)
+	var sslReloadSeconds = 60
+	customSslReloadSeconds := os.Getenv("SSL_CHECK_RELOAD_SECONDS")
+	if customSslReloadSeconds != "" {
+		n, e := strconv.Atoi(customSslReloadSeconds)
+		if e == nil {
+			sslReloadSeconds = n
 		}
+	}
+
+	certificateLoader, err := NewSslCertificateLoader(certFile, keyFile, sslReloadSeconds)
+
+	if err != nil {
+		LogErrorMessage("Error starting HTTPS server: " + err.Error())
+		return
+	}
+
+	go certificateLoader.RunReloadThread()
+
+	// Setup HTTPS server
+
+	tlsServer := http.Server{
+		Addr:    bind_addr + ":" + strconv.Itoa(port),
+		Handler: server,
+		TLSConfig: &tls.Config{
+			GetCertificate: certificateLoader.GetCertificateFunc(),
+		},
+	}
+
+	// Listen
+
+	LogInfo("[HTTPS] Listening on " + bind_addr + ":" + strconv.Itoa(port))
+
+	errSSL := tlsServer.ListenAndServeTLS("", "")
+
+	if errSSL != nil {
+		LogErrorMessage("Error starting HTTPS server: " + errSSL.Error())
 	}
 }
 
