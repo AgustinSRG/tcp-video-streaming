@@ -5,7 +5,7 @@ package main
 import (
 	"os"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Creates an authentication token to connect

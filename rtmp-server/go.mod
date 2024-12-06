@@ -1,6 +1,6 @@
 module github.com/AgustinSRG/tcp-video-streaming/rtmp-server
 
-go 1.20
+go 1.22
 
 require (
 	github.com/AgustinSRG/go-simple-rpc-message v1.0.1
