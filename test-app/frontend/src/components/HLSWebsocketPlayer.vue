@@ -5,24 +5,26 @@
 </template>
 
 <script lang="ts">
+import { HlsWebSocket } from '@asanrom/hls-websocket-cdn';
 
-import Hls from "hls.js";
 
 export default {
-  name: "HLSPlayer",
+  name: "HLSWebsocketPlayer",
   props: {
-    url: String,
+    cdnUrl: String,
+    cdnAuth: String,
+    streamId: String,
     latency: Number,
   },
   emits: ['ended'],
   setup: function () {
     return {
-      hls: null as Hls | null,
+      hls: null as HlsWebSocket | null,
     };
   },
   methods: {
     load: function () {
-      if (!this.url) {
+      if (!this.cdnUrl || !this.cdnAuth) {
         return;
       }
 
@@ -32,14 +34,19 @@ export default {
         return;
       }
 
-      if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: false, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
-        this.hls = hls;
-        hls.loadSource(this.url);
-        hls.attachMedia(video);
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = this.url;
+      if (!HlsWebSocket.isSupported()) {
+        return;
       }
+
+      const hls = new HlsWebSocket({
+        cdnServerUrl: this.cdnUrl,
+        authToken: this.cdnAuth,
+        streamId: this.streamId,
+        debug: true,
+      }, { debug: true, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
+      this.hls = hls;
+      hls.start();
+      hls.attachMedia(video);
 
       video.play();
     },
@@ -72,7 +79,7 @@ export default {
     this.clear();
   },
   watch: {
-    url: function () {
+    streamId: function () {
       this.clear();
       this.load();
     },

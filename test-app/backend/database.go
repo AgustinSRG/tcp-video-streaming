@@ -64,6 +64,15 @@ type SubStream struct {
 	IndexFile string `json:"indexFile"`
 }
 
+type SubStreamWithCdn struct {
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	FPS       int    `json:"fps"`
+	IndexFile string `json:"indexFile"`
+	CdnUrl    string `json:"cdnUrl"`
+	CdnAuth   string `json:"cdnAuth"`
+}
+
 func CreateStreamingTestAppDatabase() *StreamingTestAppDatabase {
 	db := &StreamingTestAppDatabase{
 		mutex:              &sync.Mutex{},
@@ -496,11 +505,21 @@ func (db *StreamingTestAppDatabase) GetChannelStatus(channel string) *ChannelSta
 
 		LiveStartTimestamp: channelData.LiveStartTimestamp,
 
-		LiveSubStreams: make([]SubStream, 0),
+		LiveSubStreams: make([]SubStreamWithCdn, 0),
 	}
 
 	if res.Live && channelData.LiveSubStreams != nil {
-		res.LiveSubStreams = append(res.LiveSubStreams, channelData.LiveSubStreams...)
+
+		for _, ss := range channelData.LiveSubStreams {
+			res.LiveSubStreams = append(res.LiveSubStreams, SubStreamWithCdn{
+				Width:     ss.Width,
+				Height:    ss.Height,
+				FPS:       ss.FPS,
+				IndexFile: ss.IndexFile,
+				CdnUrl:    os.Getenv("HLS_WS_CDN_URL"),
+				CdnAuth:   generateCdnPullAuthToken(ss.IndexFile),
+			})
+		}
 	}
 
 	return &res

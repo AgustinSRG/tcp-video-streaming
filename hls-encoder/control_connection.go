@@ -24,22 +24,7 @@ type ControlServerConnection struct {
 
 	lock *sync.Mutex // Mutex to control access to this struct
 
-	nextRequestId uint64 // ID for the next request ID
-
-	requests map[string]*ControlServerPendingRequest // Pending requests. Map: ID -> Request status data
-
 	enabled bool // True if the connection is enabled (will reconnect)
-}
-
-// Status data for a pending request
-type ControlServerPendingRequest struct {
-	waiter chan PublishResponse // Channel to wait for the response
-}
-
-// Response for a publish request
-type PublishResponse struct {
-	accepted bool   // True if accepted, false if denied
-	streamId string // If accepted, the stream ID
 }
 
 // Initializes connection
@@ -47,8 +32,6 @@ type PublishResponse struct {
 func (c *ControlServerConnection) Initialize(server *HLS_Encoder_Server) {
 	c.server = server
 	c.lock = &sync.Mutex{}
-	c.nextRequestId = 0
-	c.requests = make(map[string]*ControlServerPendingRequest)
 
 	baseURL := os.Getenv("CONTROL_BASE_URL")
 
@@ -157,18 +140,6 @@ func (c *ControlServerConnection) Send(msg messages.RPCMessage) bool {
 	}
 
 	return true
-}
-
-// Generates a new request-id
-func (c *ControlServerConnection) GetNextRequestId() uint64 {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	requestId := c.nextRequestId
-
-	c.nextRequestId++
-
-	return requestId
 }
 
 // Reads messages until the connection is finished

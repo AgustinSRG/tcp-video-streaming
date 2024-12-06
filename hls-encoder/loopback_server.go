@@ -3,8 +3,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -87,7 +88,7 @@ func (server *HLS_Encoder_Server) HandleRequestHLS(w http.ResponseWriter, req *h
 func (server *HLS_Encoder_Server) HandleRequestHLS_M3U8(w http.ResponseWriter, req *http.Request, task *EncodingTask, resolution Resolution, file string) {
 	// Read the body
 
-	bodyData, err := ioutil.ReadAll(req.Body)
+	bodyData, err := io.ReadAll(req.Body)
 
 	if err != nil {
 		LogError(err)
@@ -137,7 +138,16 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_TS(w http.ResponseWriter, req
 
 	fragmentPath := "hls/" + task.channel + "/" + task.streamId + "/" + resolution.Encode() + "/" + file
 
-	err = WriteFile(fragmentPath, req.Body)
+	fragmentData, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		LogError(err)
+		w.WriteHeader(400)
+		fmt.Fprintf(w, "Could not read request body.")
+		return
+	}
+
+	err = server.storage.WriteFile(fragmentPath, bytes.NewReader(fragmentData))
 
 	if err != nil {
 		LogError(err)
@@ -148,7 +158,7 @@ func (server *HLS_Encoder_Server) HandleRequestHLS_TS(w http.ResponseWriter, req
 
 	// Notice the task that the preview image is ready
 
-	task.OnFragmentReady(resolution, fileIndex)
+	task.OnFragmentReady(resolution, fileIndex, fragmentData)
 
 	w.WriteHeader(200)
 }
@@ -196,7 +206,7 @@ func (server *HLS_Encoder_Server) HandleRequestImagePreview(w http.ResponseWrite
 
 	previewPath := "img-preview/" + channel + "/" + streamId + "/" + config.Encode("-") + "/" + file
 
-	err = WriteFile(previewPath, req.Body)
+	err = server.storage.WriteFile(previewPath, req.Body)
 
 	if err != nil {
 		LogError(err)

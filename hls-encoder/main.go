@@ -19,11 +19,20 @@ func main() {
 
 	InitLog()
 
-	InitFileStorage()
+	// Initialize storage
+
+	storageSystem, err := CreateFileStorageSystem()
+
+	if err != nil {
+		fmt.Println("Error: " + err.Error())
+		os.Exit(1)
+	}
+
+	// Start
 
 	LogInfo("Started HLS encoder worker - Version " + VERSION)
 
-	err := child_process_manager.InitializeChildProcessManager()
+	err = child_process_manager.InitializeChildProcessManager()
 	if err != nil {
 		fmt.Println("Error: " + err.Error())
 		os.Exit(1)
@@ -68,7 +77,9 @@ func main() {
 
 	// Start server
 
-	server := &HLS_Encoder_Server{}
+	server := &HLS_Encoder_Server{
+		storage: storageSystem,
+	}
 
 	server.Initialize()
 	server.Start()

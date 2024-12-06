@@ -16,7 +16,9 @@ function stopStream(stream: MediaStream) {
         stream.getTracks().forEach(function (track) {
             track.stop();
         });
-    } catch (ex) { }
+    } catch (ex) { 
+        console.error(ex);
+    }
 }
 
 export function getWebsocketPublishingURL(base: string, channel: string, key: string) {
@@ -108,7 +110,7 @@ export class WebSocketPublisher extends EventTarget {
 
 
     private onMessage(ev: MessageEvent) {
-        var data = ev.data;
+        const data = ev.data;
 
         if (typeof data === "string") {
             if (data.startsWith("ERROR:")) {

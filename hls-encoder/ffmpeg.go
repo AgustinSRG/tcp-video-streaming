@@ -49,6 +49,10 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 	cmd.Args = append(cmd.Args, "-y") // Overwrite
 
+	if task.server.hlsVideoCodec == CODEC_H264_NVENC {
+		cmd.Args = append(cmd.Args, "-vsync", "0", "-hwaccel", "cuda") // NVIDIA hardware acceleration
+	}
+
 	// Add input source
 
 	sourceManager, err := PrepareEncodingProcessToReceiveSource(cmd, task.sourceType, task.sourceURI)
@@ -58,10 +62,9 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 	}
 
 	videoStream := probeData.FirstVideoStream()
-	audioStream := probeData.FirstAudioStream()
 
 	if videoStream == nil {
-		return nil, nil, errors.New("The input source does not have a video stream")
+		return nil, nil, errors.New("the input source does not have a video stream")
 	}
 
 	videoWidth := videoStream.Width
@@ -70,26 +73,29 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 
 	// Add original output
 	if task.resolutions.hasOriginal {
-		if videoStream.CodecName == "h264" && (audioStream == nil || audioStream.CodecName == "aac") {
-			// No need to re-encode, copy the stream
+		// Encode
 
-			cmd.Args = append(cmd.Args, "-vcodec", "copy", "-acodec", "copy")
-		} else {
-			// Encode
+		cmd.Args = append(cmd.Args, "-vcodec", task.server.hlsVideoCodec, "-acodec", task.server.hlsAudioCodec)
 
-			cmd.Args = append(cmd.Args, "-vcodec", "libx264", "-acodec", "aac")
-
-			if videoWidth%2 != 0 || videoHeight%2 != 0 {
-				cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
-			}
+		if task.server.hlsVideoCodec == CODEC_H264 || task.server.hlsVideoCodec == CODEC_H264_NVENC {
+			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
 		}
+
+		if videoWidth%2 != 0 || videoHeight%2 != 0 {
+			cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
+		}
+
 		AppendGenericHLSArguments(cmd, Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task)
 	}
 
 	// Add resized outputs
 	resolutions := GetActualResolutionList(Resolution{width: videoWidth, height: videoHeight, fps: videoFPS}, task.resolutions)
 	for i := 0; i < len(resolutions); i++ {
-		cmd.Args = append(cmd.Args, "-vcodec", "libx264", "-acodec", "aac")
+		cmd.Args = append(cmd.Args, "-vcodec", task.server.hlsVideoCodec, "-acodec", task.server.hlsAudioCodec)
+
+		if task.server.hlsVideoCodec == CODEC_H264 {
+			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
+		}
 
 		videoFilter := ""
 

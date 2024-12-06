@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/subtle"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -157,27 +158,59 @@ func (server *WS_Streaming_Server) runHTTPSecureServer(wg *sync.WaitGroup) {
 	bind_addr := os.Getenv("BIND_ADDRESS")
 
 	// Setup HTTPS server
-	var ssl_port int
-	ssl_port = 443
+	var port int
+	port = 443
 	customSSLPort := os.Getenv("SSL_PORT")
 	if customSSLPort != "" {
 		sslp, e := strconv.Atoi(customSSLPort)
 		if e == nil {
-			ssl_port = sslp
+			port = sslp
 		}
 	}
 
 	certFile := os.Getenv("SSL_CERT")
 	keyFile := os.Getenv("SSL_KEY")
 
-	if certFile != "" && keyFile != "" {
-		// Listen
-		LogInfo("[SSL] Listening on " + bind_addr + ":" + strconv.Itoa(ssl_port))
-		errSSL := http.ListenAndServeTLS(bind_addr+":"+strconv.Itoa(ssl_port), certFile, keyFile, server)
+	if certFile == "" || keyFile == "" {
+		return
+	}
 
-		if errSSL != nil {
-			LogError(errSSL)
+	var sslReloadSeconds = 60
+	customSslReloadSeconds := os.Getenv("SSL_CHECK_RELOAD_SECONDS")
+	if customSslReloadSeconds != "" {
+		n, e := strconv.Atoi(customSslReloadSeconds)
+		if e == nil {
+			sslReloadSeconds = n
 		}
+	}
+
+	certificateLoader, err := NewSslCertificateLoader(certFile, keyFile, sslReloadSeconds)
+
+	if err != nil {
+		LogErrorMessage("Error starting HTTPS server: " + err.Error())
+		return
+	}
+
+	go certificateLoader.RunReloadThread()
+
+	// Setup HTTPS server
+
+	tlsServer := http.Server{
+		Addr:    bind_addr + ":" + strconv.Itoa(port),
+		Handler: server,
+		TLSConfig: &tls.Config{
+			GetCertificate: certificateLoader.GetCertificateFunc(),
+		},
+	}
+
+	// Listen
+
+	LogInfo("[HTTPS] Listening on " + bind_addr + ":" + strconv.Itoa(port))
+
+	errSSL := tlsServer.ListenAndServeTLS("", "")
+
+	if errSSL != nil {
+		LogErrorMessage("Error starting HTTPS server: " + errSSL.Error())
 	}
 }
 
@@ -389,8 +422,9 @@ func (server *WS_Streaming_Server) GetPlayers(channel string) []*WS_Streaming_Se
 // key - The channel key used by the player
 // s - The session
 // Returns:
-//   idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
-//   err - Error. If not nil, it means the channel of the key are not valid
+//
+//	idling - True if the channel was not active, so the player becomes idle. False means the player can begin receiving the stream
+//	err - Error. If not nil, it means the channel of the key are not valid
 func (server *WS_Streaming_Server) AddPlayer(channel string, key string, s *WS_Streaming_Session) (idling bool, err error) {
 	server.mutex.Lock()
 	defer server.mutex.Unlock()

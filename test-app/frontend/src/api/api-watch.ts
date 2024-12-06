@@ -9,6 +9,15 @@ export interface SubStream {
     indexFile: string;
 }
 
+export interface SubStreamWithCdn {
+    width: number;
+    height: number;
+    fps: number;
+    indexFile: string;
+    cdnUrl: string;
+    cdnAuth: string;
+}
+
 export interface ChannelStatus {
     id: string;
     record: boolean;
@@ -17,7 +26,7 @@ export interface ChannelStatus {
     live: boolean;
     streamId: string;
     liveStartTimestamp: number;
-    liveSubStreams: SubStream[];
+    liveSubStreams: SubStreamWithCdn[];
 }
 
 export interface VODItem {

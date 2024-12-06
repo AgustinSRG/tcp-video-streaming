@@ -10,13 +10,15 @@ import "fmt"
 func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 	subStreamId := resolution.Encode()
 	if task.subStreams[subStreamId] == nil {
-		task.subStreams[subStreamId] = &SubStreamStatus{
+		subStream := &SubStreamStatus{
 			resolution:            resolution,
 			livePlaylist:          nil,
 			livePlaylistAvailable: false,
 			liveWriting:           false,
 			liveWritePending:      false,
 			liveWriteData:         nil,
+			cdnPublisher:          nil,
+			cdnPublisherReady:     true,
 			vodPlaylist:           nil,
 			vodPlaylistAvailable:  false,
 			vodIndex:              0,
@@ -29,6 +31,15 @@ func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 			fragments:             make(map[int]*HLS_Fragment),
 			fragmentsReady:        make(map[int]bool),
 		}
+
+		cdnPublisher := task.server.cdnPublishController.CreateCdnPublisher(task, subStream)
+
+		if cdnPublisher != nil {
+			subStream.cdnPublisherReady = false
+			subStream.cdnPublisher = cdnPublisher
+		}
+
+		task.subStreams[subStreamId] = subStream
 	}
 	return task.subStreams[subStreamId]
 }
@@ -36,7 +47,8 @@ func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 // Call when a new TS fragment is ready
 // resolution - Stream video resolution
 // fragmentIndex - Index of the fragment
-func (task *EncodingTask) OnFragmentReady(resolution Resolution, fragmentIndex int) {
+// data - Fragment data
+func (task *EncodingTask) OnFragmentReady(resolution Resolution, fragmentIndex int, data []byte) {
 	task.mutex.Lock()
 	defer task.mutex.Unlock()
 
@@ -51,6 +63,10 @@ func (task *EncodingTask) OnFragmentReady(resolution Resolution, fragmentIndex i
 	}
 
 	subStream.fragmentsReady[fragmentIndex] = true
+
+	if subStream.cdnPublisher != nil {
+		subStream.cdnPublisher.StoreFragmentData(fragmentIndex, data)
+	}
 
 	task.updateHLSInternal(subStream)
 }
@@ -122,6 +138,13 @@ func (task *EncodingTask) updateHLSInternal(subStream *SubStreamStatus) {
 	livePlaylist := subStream.livePlaylist
 
 	for i := 0; i < len(newFragments); i++ {
+		// Send to the CDN
+		if subStream.cdnPublisher != nil {
+			subStream.cdnPublisher.SendFragment(newFragments[i].Index, float32(newFragments[i].Duration))
+		}
+
+		// Add to the live playlist
+
 		livePlaylist.fragments = append(livePlaylist.fragments, newFragments[i])
 
 		if len(livePlaylist.fragments) > task.server.hlsLivePlayListSize {
@@ -244,7 +267,7 @@ func (task *EncodingTask) SaveLivePlaylist(subStream *SubStreamStatus, data []by
 	dataToWrite := data
 
 	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
+		err := task.server.storage.WriteFileBytes(filePath, dataToWrite)
 
 		if err != nil {
 			LogError(err)
@@ -275,7 +298,33 @@ func (task *EncodingTask) OnLivePlaylistSaved(subStream *SubStreamStatus) {
 
 	if !subStream.livePlaylistAvailable {
 		subStream.livePlaylistAvailable = true
-		shouldAnnounce = true
+
+		if subStream.cdnPublisherReady {
+			shouldAnnounce = true
+		}
+	}
+
+	task.mutex.Unlock()
+
+	if shouldAnnounce {
+		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-LIVE", subStream.resolution,
+			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8",
+		)
+	}
+}
+
+// Call after the CDN connection is ready
+// subStream - Reference to the sub-stream
+func (task *EncodingTask) OnCdnConnectionReady(subStream *SubStreamStatus) {
+	shouldAnnounce := false
+	task.mutex.Lock()
+
+	if !subStream.cdnPublisherReady {
+		subStream.cdnPublisherReady = true
+
+		if subStream.livePlaylistAvailable {
+			shouldAnnounce = true
+		}
 	}
 
 	task.mutex.Unlock()
@@ -294,7 +343,7 @@ func (task *EncodingTask) OnLivePlaylistSaved(subStream *SubStreamStatus) {
 func (task *EncodingTask) RemoveFragments(subStream *SubStreamStatus, fromIndex int, toIndex int) {
 	for i := fromIndex; i < toIndex; i++ {
 		filePath := "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/" + fmt.Sprint(i) + ".ts"
-		err := RemoveFile(filePath)
+		err := task.server.storage.RemoveFile(filePath)
 		if err != nil {
 			task.debug("Could not remove file: " + filePath + " | Error: " + err.Error())
 		} else {
@@ -313,7 +362,7 @@ func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byt
 	dataToWrite := data
 
 	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
+		err := task.server.storage.WriteFileBytes(filePath, dataToWrite)
 
 		if err != nil {
 			LogError(err)
@@ -357,5 +406,17 @@ func (task *EncodingTask) OnVODPlaylistSaved(subStream *SubStreamStatus) {
 		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-VOD", subStream.resolution,
 			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/vod-"+fmt.Sprint(indexToAnnounce)+".m3u8",
 		)
+	}
+}
+
+// Closes all opened connections with CDN servers for the task
+func (task *EncodingTask) CloseCdnConnections() {
+	task.mutex.Lock()
+	defer task.mutex.Unlock()
+
+	for _, subStream := range task.subStreams {
+		if subStream.cdnPublisher != nil {
+			subStream.cdnPublisher.Close()
+		}
 	}
 }

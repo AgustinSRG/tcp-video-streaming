@@ -16,7 +16,7 @@ export interface ResolutionList {
 
 export function parseResolution(str: string): Resolution {
     let parts = str.split("~");
-    let bitRate = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+    const bitRate = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
 
     parts = (parts[0] + "").toLowerCase().split("-");
     let fps = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;

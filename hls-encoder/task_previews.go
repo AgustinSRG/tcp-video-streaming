@@ -94,7 +94,7 @@ func (task *EncodingTask) SaveImagePreviewsIndex(data []byte) {
 	dataToWrite := data
 
 	for !done {
-		err := WriteFileBytes(filePath, dataToWrite)
+		err := task.server.storage.WriteFileBytes(filePath, dataToWrite)
 
 		if err != nil {
 			LogError(err)

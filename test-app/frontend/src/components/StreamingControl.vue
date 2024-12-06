@@ -286,7 +286,7 @@ export default {
   },
   methods: {
     getHLSURL: function (selectedLiveSubStream: string, liveSubStreams: SubStream[]) {
-      for (let ss of liveSubStreams) {
+      for (const ss of liveSubStreams) {
         if (ss.indexFile === selectedLiveSubStream) {
           return GetAssetURL("/" + ss.indexFile);
         }
@@ -390,7 +390,7 @@ export default {
       const bitRate = this.resToAddBitRate;
       const key = width + "x" + height + "-" + fps + "~" + bitRate;
 
-      for (let res of this.resolutions) {
+      for (const res of this.resolutions) {
         const otherKey = res.width + "x" + res.height + "-" + res.fps + "~" + bitRate;
         if (key === otherKey) {
           return;

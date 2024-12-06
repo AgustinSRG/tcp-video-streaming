@@ -7,14 +7,26 @@
         <h3 v-if="live">Status: Live</h3>
         <p v-if="live">Live time: {{ renderTime(liveNow - liveStartTimestamp) }}</p>
         <div class="form-group" v-if="live">
-          <select class="form-control" v-model="selectedLiveSubStream">
+          <select class="form-control" v-model="selectedLiveSubStream" @change="onUpdatedCdn()">
             <option :value="''">-- Select a quality to play it --</option>
             <option v-for="ss in liveSubStreams" :key="ss.indexFile" :value="ss.indexFile">{{ ss.width }}x{{ ss.height }},
               {{ ss.fps }} fps</option>
           </select>
         </div>
-        <div class="">
-          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)"></HLSPlayer>
+        <div class="form-group" v-if="live && hasCdnSupport(selectedLiveSubStream, liveSubStreams)" @change="onUpdatedCdn()">
+          <input v-model="preferCdn" type="checkbox" value="prefer-cdn">
+          <label>Use HLS Websocket CDN?</label>
+        </div>
+        <div class="form-group" v-if="live">
+          <select class="form-control" v-model="latency">
+            <option v-for="l in latencies" :key="l" :value="l">Max latency: {{ l }} seconds</option>
+          </select>
+        </div>
+        <div class="" v-if="isCdn">
+          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency" @ended="onEnded"></HLSWebsocketPlayer>
+        </div>
+        <div class="" v-else>
+          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency" @ended="onEnded"></HLSPlayer>
         </div>
       </div>
 
@@ -24,7 +36,8 @@
 
       <p v-if="vods.length > 0">List of available VODs:</p>
       <ul v-if="vods.length > 0">
-        <li v-for="vod in vods">[{{ renderDate(vod.timestamp) }}] <RouterLink :to="'/watch/' + channelId + '/vod/' + vod.streamId">./vod/{{ vod.streamId }}</RouterLink></li>
+        <li v-for="(vod, vi) in vods" :key="vi">[{{ renderDate(vod.timestamp) }}] <RouterLink :to="'/watch/' + channelId + '/vod/' + vod.streamId">./vod/{{ vod.streamId }}</RouterLink>
+        </li>
       </ul>
     </div>
     <div v-if="!found">
@@ -32,17 +45,18 @@
     </div>
   </div>
 </template>
-  
+
 <script lang="ts">
-import { WatchAPI, type ChannelStatus, type SubStream, type VODItem, type VODItemList } from "@/api/api-watch";
+import { type SubStreamWithCdn, WatchAPI, type ChannelStatus, type VODItem, type VODItemList } from "@/api/api-watch";
 
 import HLSPlayer from "./HLSPlayer.vue";
-import ConfirmationModal from "./ConfirmationModal.vue";
+import HLSWebsocketPlayer from "./HLSWebsocketPlayer.vue";
 import { RouterLink } from 'vue-router';
 import { GetAssetURL, Request } from "@/utils/request";
 import { renderTimeSeconds } from "@/utils/time-utils";
 import { ChannelStorage } from "@/control/channel-storage";
 import { Timeouts } from "@/utils/timeout";
+import { HlsWebSocket } from "@asanrom/hls-websocket-cdn";
 
 interface ComponentData {
   found: boolean;
@@ -52,8 +66,18 @@ interface ComponentData {
   live: boolean;
   liveStartTimestamp: number;
   liveNow: number;
-  liveSubStreams: SubStream[];
+  liveSubStreams: SubStreamWithCdn[];
   selectedLiveSubStream: string,
+
+  preferCdn: boolean,
+
+  isCdn: boolean,
+  cdnUrl: string,
+  cdnAuth: string,
+
+  latency: number,
+
+  waitingForEnd: boolean,
 
   vods: VODItem[];
 }
@@ -63,12 +87,13 @@ export default {
   emits: [],
   components: {
     HLSPlayer,
+    HLSWebsocketPlayer,
     RouterLink,
-    ConfirmationModal,
   },
   setup: function () {
     return {
       tickTimer: 0,
+      latencies: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
     };
   },
   data: function (): ComponentData {
@@ -83,18 +108,71 @@ export default {
       liveNow: Date.now(),
       selectedLiveSubStream: "",
 
+      preferCdn: true,
+
+      isCdn: false,
+      cdnAuth: "",
+      cdnUrl: "",
+
+      latency: 10,
+
       vods: [],
+
+      waitingForEnd: false,
     };
   },
   methods: {
-    getHLSURL: function (selectedLiveSubStream: string, liveSubStreams: SubStream[]) {
-      for (let ss of liveSubStreams) {
+    getHLSURL: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): string {
+      for (const ss of liveSubStreams) {
         if (ss.indexFile === selectedLiveSubStream) {
           return GetAssetURL("/" + ss.indexFile);
         }
       }
 
       return "";
+    },
+
+    getCdnStreamId: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): string {
+      for (const ss of liveSubStreams) {
+        if (ss.indexFile === selectedLiveSubStream) {
+          return ss.indexFile;
+        }
+      }
+
+      return "";
+    },
+
+    hasCdnSupport: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): boolean {
+      if (!HlsWebSocket.isSupported()) {
+        return false;
+      }
+
+      for (const ss of liveSubStreams) {
+        if (ss.indexFile === selectedLiveSubStream) {
+          return !!ss.cdnUrl && !!ss.cdnAuth;
+        }
+      }
+
+      return false;
+    },
+
+    canWatchByCdn: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[], preferCdn: boolean): boolean {
+      if (!this.hasCdnSupport(selectedLiveSubStream, liveSubStreams)) {
+        return false;
+      }
+
+      return preferCdn;
+    },
+
+    onUpdatedCdn: function () {
+      this.isCdn = this.canWatchByCdn(this.selectedLiveSubStream, this.liveSubStreams, this.preferCdn);
+
+      for (const ss of this.liveSubStreams) {
+        if (ss.indexFile === this.selectedLiveSubStream) {
+          this.cdnUrl = ss.cdnUrl;
+          this.cdnAuth = ss.cdnAuth;
+        }
+      }
     },
 
     updateNow: function () {
@@ -110,7 +188,7 @@ export default {
     },
 
     autoSelectLiveStream: function () {
-      for (let ss of this.liveSubStreams) {
+      for (const ss of this.liveSubStreams) {
         if (ss.indexFile === this.selectedLiveSubStream) {
           return;
         }
@@ -121,6 +199,8 @@ export default {
       } else {
         this.selectedLiveSubStream = "";
       }
+
+      this.onUpdatedCdn();
     },
 
     findChannel: function () {
@@ -147,23 +227,30 @@ export default {
       )
         .onSuccess((result: ChannelStatus) => {
           this.found = true;
-          this.live = result.live;
-          this.liveStartTimestamp = result.liveStartTimestamp;
-          this.liveSubStreams = result.liveSubStreams.sort((a, b) => {
-            const aSize = a.width * a.height;
-            const bSize = b.width * b.height;
 
-            if (aSize > bSize) {
-              return -1;
-            } else if (bSize > aSize) {
-              return 1;
-            } else if (a.fps > b.fps) {
-              return -1;
-            } else {
-              return 1;
-            }
-          });
-          this.autoSelectLiveStream();
+          if (this.live && !result.live) {
+            this.waitingForEnd = true;
+          } else {
+            this.waitingForEnd = false;
+            this.live = result.live;
+            this.liveStartTimestamp = result.liveStartTimestamp;
+            this.liveSubStreams = result.liveSubStreams.sort((a, b) => {
+              const aSize = a.width * a.height;
+              const bSize = b.width * b.height;
+
+              if (aSize > bSize) {
+                return -1;
+              } else if (bSize > aSize) {
+                return 1;
+              } else if (a.fps > b.fps) {
+                return -1;
+              } else {
+                return 1;
+              }
+            });
+            this.autoSelectLiveStream();
+          }
+
           Timeouts.Set("load-channel-status-watch", 5000, this.loadChannelStatus.bind(this));
         })
         .onRequestError((err) => {
@@ -213,6 +300,16 @@ export default {
           console.error(err);
           Timeouts.Set("load-channel-vods-watch", 2000, this.loadChannelVODList.bind(this));
         });
+    },
+
+    onEnded: function () {
+      if (!this.waitingForEnd) {
+        return;
+      }
+
+      this.waitingForEnd = false;
+      this.live = false;
+      this.liveSubStreams = [];
     },
   },
   mounted: function () {

@@ -29,6 +29,8 @@ services:
       - EVENT_CALLBACK_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
       - STREAMING_COMMANDS_AUTH=Bearer
       - STREAMING_COMMANDS_AUTH_TOKEN=${SHARED_SECRET:-demosecret}
+      - HLS_WS_CDN_URL=ws://localhost:9090
+      - HLS_WS_CDN_PULL_SECRET=${SHARED_SECRET:-demosecret}
   
   # Streaming components
 
@@ -68,6 +70,9 @@ services:
       - CONTROL_BASE_URL=ws://coordinator/
       - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
       - SERVER_CAPACITY=100
+      - HLS_WS_CDN_ENABLED=YES
+      - HLS_WS_CDN_URL=ws://hls-cdn/
+      - HLS_WS_CDN_PUSH_SECRET=${SHARED_SECRET:-demosecret}
 
   rtmp_server:
     depends_on:
@@ -108,6 +113,19 @@ services:
       - CONTROL_BASE_URL=ws://coordinator/
       - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
       - PLAY_WHITELIST=*
+
+  hls_cdn_server:
+    hostname: hls-cdn
+    ports:
+      - 9090:80
+    networks:
+      - tcp_video_streaming_test
+    image: asanrom/hls-websocket-cdn:latest
+    restart: unless-stopped
+    environment:
+      - PULL_SECRET=${SHARED_SECRET:-demosecret}
+      - PUSH_SECRET=${SHARED_SECRET:-demosecret}
+      - PUSH_ALLOWED=YES
 
 networks:
   tcp_video_streaming_test:

@@ -12,6 +12,9 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const JSON_BODY_MAX_LENGTH = 5 * 1024 * 1024
@@ -122,4 +125,27 @@ func generateRandomKey() string {
 	keyBytes := make([]byte, 32)
 	rand.Read(keyBytes)
 	return hex.EncodeToString(keyBytes)
+}
+
+// Generates an authentication token for HLS Websocket CDN
+// in order to pull the stream
+func generateCdnPullAuthToken(streamId string) string {
+	secret := os.Getenv("HLS_WS_CDN_PULL_SECRET")
+
+	if secret == "" {
+		return ""
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": "PULL:" + streamId,
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(secret))
+
+	if err != nil {
+		LogError(err)
+	}
+
+	return tokenString
 }
