@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/websocket"
+	client_publisher "github.com/AgustinSRG/hls-websocket-cdn/client-publisher"
 )
 
 const HEARTBEAT_MSG_PERIOD_SECONDS = 30
@@ -31,7 +30,7 @@ type CdnPublishController struct {
 	enabled bool
 
 	// List of servers
-	servers []CdnServer
+	servers []*CdnServer
 
 	// Secret to generate tokens to push
 	pushSecret string
@@ -46,7 +45,7 @@ func NewCdnPublishController() *CdnPublishController {
 
 	pushSecret := os.Getenv("HLS_WS_CDN_PUSH_SECRET")
 
-	serverList := make([]CdnServer, 0)
+	serverList := make([]*CdnServer, 0)
 
 	serverListStr := os.Getenv("HLS_WS_CDN_URL")
 
@@ -54,7 +53,7 @@ func NewCdnPublishController() *CdnPublishController {
 		serverListStrSplit := strings.Split(serverListStr, " ")
 
 		for _, url := range serverListStrSplit {
-			serverList = append(serverList, CdnServer{
+			serverList = append(serverList, &CdnServer{
 				url:           url,
 				lastTimeError: 0,
 			})
@@ -81,7 +80,7 @@ func (pc *CdnPublishController) IsEnabled() bool {
 const CDN_SERVER_ERROR_WAIT_TIME = 10 * 1000
 
 // Gets the URL of a CDN server
-func (pc *CdnPublishController) GetServerUrl() (string, *CdnServer) {
+func (pc *CdnPublishController) GetServerUrl() string {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
@@ -91,54 +90,40 @@ func (pc *CdnPublishController) GetServerUrl() (string, *CdnServer) {
 
 	for _, s := range pc.servers {
 		if now-s.lastTimeError <= CDN_SERVER_ERROR_WAIT_TIME {
-			availableServerList = append(availableServerList, &s)
+			availableServerList = append(availableServerList, s)
 		}
 	}
 
 	if len(availableServerList) == 1 {
-		return availableServerList[1].url, availableServerList[1]
+		return availableServerList[1].url
 	} else if len(availableServerList) > 1 {
 		i := rand.IntN(len(availableServerList))
-		return availableServerList[i].url, availableServerList[1]
+		return availableServerList[i].url
 	}
 
 	url := ""
 	lastErrorTime := now
-	var serverRef *CdnServer = nil
 
 	for _, s := range pc.servers {
 		if s.lastTimeError < lastErrorTime {
 			url = s.url
 			lastErrorTime = s.lastTimeError
-			serverRef = &s
 		}
 	}
 
-	return url, serverRef
+	return url
 }
 
 // Reports server failure
-func (pc *CdnPublishController) ReportServerFailure(s *CdnServer) {
+func (pc *CdnPublishController) ReportServerFailure(url string) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
-	s.lastTimeError = time.Now().Unix()
-}
-
-// Gets the authentication token for pushing the stream
-func (pc *CdnPublishController) GetPushToken(streamId string) string {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": "PUSH:" + streamId,
-		"exp": time.Now().Add(1 * time.Hour).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(pc.pushSecret))
-
-	if err != nil {
-		LogErrorMessage("Error signing token: " + err.Error())
+	for _, s := range pc.servers {
+		if s.url == url {
+			s.lastTimeError = time.Now().Unix()
+		}
 	}
-
-	return tokenString
 }
 
 // Fragment pending to be sent
@@ -170,20 +155,8 @@ type CdnPublisher struct {
 	// Map to store fragments data before sending
 	fragmentsData map[int]([]byte)
 
-	// Fragments queue
-	fragmentsQueue []CdnPublisherPendingFragment
-
 	// Socket
-	socket *websocket.Conn
-
-	// True if closed
-	closed bool
-
-	// True if ready
-	ready bool
-
-	// Channel to interrupt the heartbeat process
-	heartbeatInterruptChannel chan bool
+	client *client_publisher.HlsWebSocketPublisher
 }
 
 // Creates CDN publisher
@@ -193,75 +166,33 @@ func (controller *CdnPublishController) CreateCdnPublisher(task *EncodingTask, s
 	}
 
 	publisher := &CdnPublisher{
-		mu:                        &sync.Mutex{},
-		controller:                controller,
-		task:                      task,
-		subStream:                 subStream,
-		resolution:                subStream.resolution,
-		fragmentsData:             make(map[int][]byte),
-		fragmentsQueue:            make([]CdnPublisherPendingFragment, 0),
-		socket:                    nil,
-		closed:                    false,
-		ready:                     false,
-		heartbeatInterruptChannel: make(chan bool, 1),
+		mu:            &sync.Mutex{},
+		controller:    controller,
+		task:          task,
+		subStream:     subStream,
+		resolution:    subStream.resolution,
+		fragmentsData: make(map[int][]byte),
+		client: client_publisher.NewHlsWebSocketPublisher(client_publisher.HlsWebSocketPublisherConfiguration{
+			GetServerUrl: controller.GetServerUrl,
+			StreamId:     "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/live.m3u8",
+			AuthSecret:   controller.pushSecret,
+			OnReady: func() {
+				task.OnCdnConnectionReady(subStream)
+			},
+			OnError: func(url, msg string) {
+				task.log("[CDN Publisher] [ERROR] [URL: " + url + "] " + msg)
+				controller.ReportServerFailure(url)
+			},
+		}),
 	}
 
 	return publisher
-}
-
-// Gets CDN stream ID given the task and the resolution
-func (pub *CdnPublisher) GetCdnStreamId() string {
-	return "hls/" + pub.task.channel + "/" + pub.task.streamId + "/" + pub.resolution.Encode() + "/live.m3u8"
-}
-
-func (pub *CdnPublisher) SendHeartbeatMessages() {
-	heartbeatMessage := CdnWebsocketProtocolMessage{
-		MessageType: "H",
-	}
-
-	for {
-		select {
-		case <-time.After(time.Duration(HEARTBEAT_MSG_PERIOD_SECONDS) * time.Second):
-			pub.SendMessage(&heartbeatMessage)
-		case <-pub.heartbeatInterruptChannel:
-			return
-		}
-	}
-}
-
-// Send message
-func (pub *CdnPublisher) SendMessage(msg *CdnWebsocketProtocolMessage) {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	if pub.closed || pub.socket == nil {
-		return
-	}
-
-	pub.socket.WriteMessage(websocket.TextMessage, []byte(msg.Serialize()))
-}
-
-// Internal function to send the fragment message
-func (pub *CdnPublisher) sendFragmentInternal(duration float32, data []byte) {
-	msg := CdnWebsocketProtocolMessage{
-		MessageType: "F",
-		Parameters: map[string]string{
-			"duration": fmt.Sprint(duration),
-		},
-	}
-
-	pub.socket.WriteMessage(websocket.TextMessage, []byte(msg.Serialize()))
-	pub.socket.WriteMessage(websocket.BinaryMessage, data)
 }
 
 // Stores fragment data
 func (pub *CdnPublisher) StoreFragmentData(index int, data []byte) {
 	pub.mu.Lock()
 	defer pub.mu.Unlock()
-
-	if pub.closed {
-		return
-	}
 
 	pub.fragmentsData[index] = data
 }
@@ -276,10 +207,6 @@ func (pub *CdnPublisher) SendFragment(index int, duration float32) {
 	pub.mu.Lock()
 	defer pub.mu.Unlock()
 
-	if pub.closed {
-		return
-	}
-
 	data := pub.fragmentsData[index]
 
 	if data == nil {
@@ -293,199 +220,10 @@ func (pub *CdnPublisher) SendFragment(index int, duration float32) {
 		return // Skip empty fragment
 	}
 
-	if pub.ready {
-		pub.sendFragmentInternal(duration, data)
-	} else {
-		if len(pub.fragmentsQueue) >= pub.task.server.hlsLivePlayListSize && len(pub.fragmentsQueue) > 0 {
-			pub.fragmentsQueue = append(pub.fragmentsQueue[1:], CdnPublisherPendingFragment{
-				Duration: duration,
-				Data:     data,
-			})
-		} else {
-			pub.fragmentsQueue = append(pub.fragmentsQueue, CdnPublisherPendingFragment{
-				Duration: duration,
-				Data:     data,
-			})
-		}
-	}
-}
-
-// Returns true if the publisher is closed
-func (pub *CdnPublisher) IsClosed() bool {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	return pub.closed
-}
-
-// Called when the connection is opened
-func (pub *CdnPublisher) OnConnected(socket *websocket.Conn) {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	if pub.closed {
-		return
-	}
-
-	pub.socket = socket
-}
-
-// Closes connection to the CDN server
-func (pub *CdnPublisher) Ready() {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	if pub.closed {
-		return
-	}
-
-	pub.ready = true
-
-	for _, f := range pub.fragmentsQueue {
-		pub.sendFragmentInternal(f.Duration, f.Data)
-	}
-
-	pub.fragmentsQueue = make([]CdnPublisherPendingFragment, 0)
-}
-
-// Call when disconnected from the server
-func (pub *CdnPublisher) OnDisconnected() {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	if pub.closed {
-		return
-	}
-
-	pub.ready = false
-	pub.socket = nil
+	pub.client.SendFragment(duration, data)
 }
 
 // Closes connection to the CDN server
 func (pub *CdnPublisher) Close() {
-	pub.mu.Lock()
-	defer pub.mu.Unlock()
-
-	if pub.closed {
-		return
-	}
-
-	if pub.socket != nil {
-		// Send close message
-		closeMessage := CdnWebsocketProtocolMessage{
-			MessageType: "CLOSE",
-		}
-
-		pub.socket.WriteMessage(websocket.TextMessage, []byte(closeMessage.Serialize()))
-
-		// Close connection
-		pub.socket.Close()
-		pub.socket = nil
-	}
-
-	pub.closed = true
-	pub.ready = false
-
-	// Interrupt heartbeat
-	pub.heartbeatInterruptChannel <- true
-}
-
-// Starts the publisher
-func (pub *CdnPublisher) Start() {
-	go pub.Run()
-	go pub.SendHeartbeatMessages()
-}
-
-// Limit (in bytes) for text messages (to prevent DOS attacks)
-const TEXT_MSG_READ_LIMIT = 1600
-
-// Runs the publisher
-func (pub *CdnPublisher) Run() {
-	for !pub.IsClosed() {
-		url, serverRef := pub.controller.GetServerUrl()
-
-		socket, _, err := websocket.DefaultDialer.Dial(url, nil)
-
-		if pub.IsClosed() {
-			return
-		}
-
-		if err != nil {
-			pub.log("Could not connect to " + url + " | " + err.Error())
-
-			if serverRef != nil {
-				pub.controller.ReportServerFailure(serverRef)
-			}
-
-			time.Sleep(1 * time.Second) // Wait a second to try again
-			continue
-		}
-
-		// Connected, send authentication
-
-		cdnStreamId := pub.GetCdnStreamId()
-
-		authMessage := CdnWebsocketProtocolMessage{
-			MessageType: "PUSH",
-			Parameters: map[string]string{
-				"stream": cdnStreamId,
-				"auth":   pub.controller.GetPushToken(cdnStreamId),
-			},
-		}
-
-		socket.WriteMessage(websocket.TextMessage, []byte(authMessage.Serialize()))
-
-		// Connected
-
-		pub.OnConnected(socket)
-
-		var closedWithError = false
-
-		// Read incoming messages
-
-		for !pub.IsClosed() {
-			err := socket.SetReadDeadline(time.Now().Add(HEARTBEAT_MSG_PERIOD_SECONDS * 2 * time.Second))
-
-			if err != nil {
-				if !pub.IsClosed() {
-					pub.log("Error: " + err.Error())
-				}
-				break // Closed
-			}
-
-			socket.SetReadLimit(TEXT_MSG_READ_LIMIT)
-
-			mt, message, err := socket.ReadMessage()
-
-			if err != nil {
-				if !pub.IsClosed() {
-					pub.log("Error: " + err.Error())
-				}
-				break // Closed
-			}
-
-			if mt != websocket.TextMessage {
-				continue
-			}
-
-			parsedMessage := ParseCdnWebsocketProtocolMessage(string(message))
-
-			switch parsedMessage.MessageType {
-			case "E":
-				pub.log("Error from CDN. Code: " + parsedMessage.GetParameter("code") + ", Message: " + parsedMessage.GetParameter("message"))
-				closedWithError = true
-			case "OK":
-				// Ready
-				pub.Ready()
-				pub.task.OnCdnConnectionReady(pub.subStream)
-			}
-		}
-
-		pub.OnDisconnected()
-
-		if closedWithError && serverRef != nil {
-			pub.controller.ReportServerFailure(serverRef)
-			time.Sleep(1 * time.Second) // Wait a second to try again
-		}
-	}
+	pub.client.Close()
 }

@@ -37,7 +37,6 @@ func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 		if cdnPublisher != nil {
 			subStream.cdnPublisherReady = false
 			subStream.cdnPublisher = cdnPublisher
-			cdnPublisher.Start()
 		}
 
 		task.subStreams[subStreamId] = subStream
