@@ -36,7 +36,7 @@
 
       <p v-if="vods.length > 0">List of available VODs:</p>
       <ul v-if="vods.length > 0">
-        <li v-for="vod in vods">[{{ renderDate(vod.timestamp) }}] <RouterLink :to="'/watch/' + channelId + '/vod/' + vod.streamId">./vod/{{ vod.streamId }}</RouterLink>
+        <li v-for="(vod, vi) in vods" :key="vi">[{{ renderDate(vod.timestamp) }}] <RouterLink :to="'/watch/' + channelId + '/vod/' + vod.streamId">./vod/{{ vod.streamId }}</RouterLink>
         </li>
       </ul>
     </div>
@@ -51,13 +51,12 @@ import { type SubStreamWithCdn, WatchAPI, type ChannelStatus, type VODItem, type
 
 import HLSPlayer from "./HLSPlayer.vue";
 import HLSWebsocketPlayer from "./HLSWebsocketPlayer.vue";
-import ConfirmationModal from "./ConfirmationModal.vue";
 import { RouterLink } from 'vue-router';
 import { GetAssetURL, Request } from "@/utils/request";
 import { renderTimeSeconds } from "@/utils/time-utils";
 import { ChannelStorage } from "@/control/channel-storage";
 import { Timeouts } from "@/utils/timeout";
-import { HlsWebsocket } from "@asanrom/hls-websocket-cdn";
+import { HlsWebSocket } from "@asanrom/hls-websocket-cdn";
 
 interface ComponentData {
   found: boolean;
@@ -90,7 +89,6 @@ export default {
     HLSPlayer,
     HLSWebsocketPlayer,
     RouterLink,
-    ConfirmationModal,
   },
   setup: function () {
     return {
@@ -125,7 +123,7 @@ export default {
   },
   methods: {
     getHLSURL: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): string {
-      for (let ss of liveSubStreams) {
+      for (const ss of liveSubStreams) {
         if (ss.indexFile === selectedLiveSubStream) {
           return GetAssetURL("/" + ss.indexFile);
         }
@@ -135,7 +133,7 @@ export default {
     },
 
     getCdnStreamId: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): string {
-      for (let ss of liveSubStreams) {
+      for (const ss of liveSubStreams) {
         if (ss.indexFile === selectedLiveSubStream) {
           return ss.indexFile;
         }
@@ -145,11 +143,11 @@ export default {
     },
 
     hasCdnSupport: function (selectedLiveSubStream: string, liveSubStreams: SubStreamWithCdn[]): boolean {
-      if (!HlsWebsocket.isSupported()) {
+      if (!HlsWebSocket.isSupported()) {
         return false;
       }
 
-      for (let ss of liveSubStreams) {
+      for (const ss of liveSubStreams) {
         if (ss.indexFile === selectedLiveSubStream) {
           return !!ss.cdnUrl && !!ss.cdnAuth;
         }
@@ -169,7 +167,7 @@ export default {
     onUpdatedCdn: function () {
       this.isCdn = this.canWatchByCdn(this.selectedLiveSubStream, this.liveSubStreams, this.preferCdn);
 
-      for (let ss of this.liveSubStreams) {
+      for (const ss of this.liveSubStreams) {
         if (ss.indexFile === this.selectedLiveSubStream) {
           this.cdnUrl = ss.cdnUrl;
           this.cdnAuth = ss.cdnAuth;
@@ -190,7 +188,7 @@ export default {
     },
 
     autoSelectLiveStream: function () {
-      for (let ss of this.liveSubStreams) {
+      for (const ss of this.liveSubStreams) {
         if (ss.indexFile === this.selectedLiveSubStream) {
           return;
         }

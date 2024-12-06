@@ -5,7 +5,7 @@
 </template>
 
 <script lang="ts">
-import { HlsWebsocket } from '@asanrom/hls-websocket-cdn';
+import { HlsWebSocket } from '@asanrom/hls-websocket-cdn';
 
 
 export default {
@@ -19,7 +19,7 @@ export default {
   emits: ['ended'],
   setup: function () {
     return {
-      hls: null as HlsWebsocket | null,
+      hls: null as HlsWebSocket | null,
     };
   },
   methods: {
@@ -34,16 +34,16 @@ export default {
         return;
       }
 
-      if (!HlsWebsocket.isSupported()) {
+      if (!HlsWebSocket.isSupported()) {
         return;
       }
 
-      const hls = new HlsWebsocket({
+      const hls = new HlsWebSocket({
         cdnServerUrl: this.cdnUrl,
         authToken: this.cdnAuth,
         streamId: this.streamId,
         debug: true,
-      }, { enableWorker: false, debug: true, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
+      }, { debug: true, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
       this.hls = hls;
       hls.start();
       hls.attachMedia(video);

@@ -107,7 +107,7 @@ export default {
   },
   methods: {
     getHLSURL: function (selectedSubStream: string, subStreams: SubStream[]) {
-      for (let ss of subStreams) {
+      for (const ss of subStreams) {
         if (ss.indexFile === selectedSubStream) {
           return GetAssetURL("/" + ss.indexFile);
         }
@@ -136,7 +136,7 @@ export default {
     },
 
     autoSelectSubStream: function () {
-      for (let ss of this.subStreams) {
+      for (const ss of this.subStreams) {
         if (ss.indexFile === this.selectedSubStream) {
           return;
         }
