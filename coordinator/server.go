@@ -10,7 +10,9 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	tls_certificate_loader "github.com/AgustinSRG/go-tls-certificate-loader"
 	"github.com/gorilla/websocket"
 )
 
@@ -130,14 +132,24 @@ func (server *Streaming_Coordinator_Server) runHTTPSecureServer(wg *sync.WaitGro
 		}
 	}
 
-	certificateLoader, err := NewSslCertificateLoader(certFile, keyFile, sslReloadSeconds)
+	certificateLoader, err := tls_certificate_loader.NewTlsCertificateLoader(tls_certificate_loader.TlsCertificateLoaderConfig{
+		CertificatePath:   certFile,
+		KeyPath:           keyFile,
+		CheckReloadPeriod: time.Duration(sslReloadSeconds) * time.Second,
+		OnReload: func() {
+			LogInfo("Reloaded SSL certificates")
+		},
+		OnError: func(err error) {
+			LogErrorMessage("Error loading SSL key pair: " + err.Error())
+		},
+	})
 
 	if err != nil {
 		LogErrorMessage("Error starting HTTPS server: " + err.Error())
 		return
 	}
 
-	go certificateLoader.RunReloadThread()
+	defer certificateLoader.Close()
 
 	// Setup HTTPS server
 
@@ -145,7 +157,7 @@ func (server *Streaming_Coordinator_Server) runHTTPSecureServer(wg *sync.WaitGro
 		Addr:    bind_addr + ":" + strconv.Itoa(port),
 		Handler: server,
 		TLSConfig: &tls.Config{
-			GetCertificate: certificateLoader.GetCertificateFunc(),
+			GetCertificate: certificateLoader.GetCertificate,
 		},
 	}
 

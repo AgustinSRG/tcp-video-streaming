@@ -1,6 +1,6 @@
 module github.com/AgustinSRG/tcp-video-streaming/rtmp-server
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/AgustinSRG/go-simple-rpc-message v1.0.1
@@ -9,3 +9,5 @@ require (
 )
 
 require github.com/golang-jwt/jwt/v5 v5.2.1
+
+require github.com/AgustinSRG/go-tls-certificate-loader v1.0.0
