@@ -33,6 +33,7 @@ type HLS_Encoder_Server struct {
 	hlsVideoCodec         string // Video codec
 	hlsAudioCodec         string // Audio codec
 	hlsH264Preset         string // H.264 codec preset
+	hlsPixelFormat        string // Pixel format
 
 	tasks map[string]*EncodingTask // List of active encoding tasks. Map (channel:streamId) -> Task
 }
@@ -60,6 +61,7 @@ func (server *HLS_Encoder_Server) Initialize() {
 	server.hlsVideoCodec = GetConfiguredVideoCodec()
 	server.hlsAudioCodec = GetConfiguredAudioCodec()
 	server.hlsH264Preset = GetH264Preset()
+	server.hlsPixelFormat = GetConfiguredPixelFormat()
 
 	server.tasks = make(map[string]*EncodingTask)
 

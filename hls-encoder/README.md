@@ -130,6 +130,7 @@ Additional configuration for HLS
 | HLS_VOD_MAX_SIZE         | Max number of fragments to include in a single VOD playlist. Default value: `86400`                                   |
 | HLS_FRAGMENT_COUNT_LIMIT | Max number of fragments to allow in a single stream. If reached, the stream will be closed. Default value: `16777216` |
 | HLS_H264_PRESET          | Preset for H.264 codec. Default: `veryfast`. [Documentation](https://trac.ffmpeg.org/wiki/Encode/H.264#Preset).       |
+| HLS_PIXEL_FORMAT         | Pixel format for the codec. Default: `yuv420p`                                                                        |
 
 Fully supported options for `HLS_VIDEO_CODEC`:
 

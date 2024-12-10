@@ -81,6 +81,8 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
 		}
 
+		cmd.Args = append(cmd.Args, "-pix_fmt", task.server.hlsPixelFormat)
+
 		if videoWidth%2 != 0 || videoHeight%2 != 0 {
 			cmd.Args = append(cmd.Args, "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2") // Ensure even width and height
 		}
@@ -96,6 +98,8 @@ func PrepareEncodingFFMPEGCommand(task *EncodingTask, probeData *ffprobe.ProbeDa
 		if task.server.hlsVideoCodec == CODEC_H264 {
 			cmd.Args = append(cmd.Args, "-preset", task.server.hlsH264Preset)
 		}
+
+		cmd.Args = append(cmd.Args, "-pix_fmt", task.server.hlsPixelFormat)
 
 		videoFilter := ""
 

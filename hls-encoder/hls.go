@@ -22,6 +22,7 @@ const (
 	HLS_DEFAULT_AUDIO_CODEC       = "aac"
 	HLS_H264_DEFAULT_PRESET       = "veryfast"
 	HLS_H264_NVENC_DEFAULT_PRESET = "fast"
+	HLS_DEFAULT_PIXEL_FORMAT      = "yuv420p"
 )
 
 // Returns the configured HLS video codec
@@ -31,6 +32,16 @@ func GetConfiguredVideoCodec() string {
 		return codec
 	} else {
 		return HLS_DEFAULT_VIDEO_CODEC
+	}
+}
+
+// Returns the configured HLS pixel format
+func GetConfiguredPixelFormat() string {
+	pixelFormat := os.Getenv("HLS_PIXEL_FORMAT")
+	if pixelFormat != "" {
+		return pixelFormat
+	} else {
+		return HLS_DEFAULT_PIXEL_FORMAT
 	}
 }
 
