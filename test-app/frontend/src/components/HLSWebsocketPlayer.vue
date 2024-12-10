@@ -1,12 +1,12 @@
 <template>
   <div class="hls-player">
-    <video controls @ended="onEnded"></video>
+    <video controls @ended="onEnded" @waiting="onStalled" @playing="onPlaying"></video>
   </div>
 </template>
 
 <script lang="ts">
+import { useVModel } from '@/utils/vmodel';
 import { HlsWebSocket } from '@asanrom/hls-websocket-cdn';
-
 
 export default {
   name: "HLSWebsocketPlayer",
@@ -15,11 +15,14 @@ export default {
     cdnAuth: String,
     streamId: String,
     latency: Number,
+    stalled: Boolean,
   },
-  emits: ['ended'],
-  setup: function () {
+  emits: ['ended', 'update:stalled'],
+  setup: function (props) {
     return {
       hls: null as HlsWebSocket | null,
+
+      stalledStatus: useVModel(props, "stalled"),
     };
   },
   methods: {
@@ -43,7 +46,9 @@ export default {
         authToken: this.cdnAuth,
         streamId: this.streamId,
         debug: true,
-      }, { debug: true, liveMaxLatencyDuration: (this.latency || 60) + 1, liveSyncDuration: this.latency || 60 });
+        delay: (this.latency || 60) - 1,
+        maxDelay: this.latency || 60,
+      });
       this.hls = hls;
       hls.start();
       hls.attachMedia(video);
@@ -71,6 +76,14 @@ export default {
     onEnded: function () {
       this.$emit("ended");
     },
+
+    onStalled: function () {
+      this.stalledStatus = true;
+    },
+
+    onPlaying: function () {
+      this.stalledStatus = false;
+    },
   },
   mounted: function () {
     this.load();
@@ -83,9 +96,19 @@ export default {
       this.clear();
       this.load();
     },
-    latency: function () {
-      this.clear();
-      this.load();
+    latency: function (newValue: number, oldValue: number) {
+      if (newValue === oldValue) {
+        return;
+      }
+
+      if (newValue < oldValue) {
+        if (this.hls) {
+          this.hls.setDelayOptions(newValue - 1, newValue);
+        }
+      } else {
+        this.clear();
+        this.load();
+      }
     },
   }
 };

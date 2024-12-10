@@ -1,11 +1,12 @@
 <template>
   <div class="hls-player">
-    <video controls @ended="onEnded"></video>
+    <video controls @ended="onEnded" @waiting="onStalled" @playing="onPlaying"></video>
   </div>
 </template>
 
 <script lang="ts">
 
+import { useVModel } from "@/utils/vmodel";
 import Hls from "hls.js";
 
 export default {
@@ -13,11 +14,14 @@ export default {
   props: {
     url: String,
     latency: Number,
+    stalled: Boolean,
   },
-  emits: ['ended'],
-  setup: function () {
+  emits: ['ended', 'update:stalled'],
+  setup: function (props) {
     return {
       hls: null as Hls | null,
+
+      stalledStatus: useVModel(props, "stalled"),
     };
   },
   methods: {
@@ -63,6 +67,14 @@ export default {
 
     onEnded: function () {
       this.$emit("ended");
+    },
+
+    onStalled: function () {
+      this.stalledStatus = true;
+    },
+
+    onPlaying: function () {
+      this.stalledStatus = false;
     },
   },
   mounted: function () {

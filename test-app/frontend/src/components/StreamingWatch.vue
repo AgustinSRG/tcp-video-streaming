@@ -23,10 +23,10 @@
           </select>
         </div>
         <div class="" v-if="isCdn">
-          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency" @ended="onEnded"></HLSWebsocketPlayer>
+          <HLSWebsocketPlayer :cdn-url="cdnUrl" :cdn-auth="cdnAuth" :stream-id="selectedLiveSubStream" :latency="latency" @ended="onEnded" v-model:stalled="playerStalled" @update:stalled="onStalled"></HLSWebsocketPlayer>
         </div>
         <div class="" v-else>
-          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency" @ended="onEnded"></HLSPlayer>
+          <HLSPlayer :url="getHLSURL(selectedLiveSubStream, liveSubStreams)" :latency="latency" @ended="onEnded" v-model:stalled="playerStalled" @update:stalled="onStalled"></HLSPlayer>
         </div>
       </div>
 
@@ -79,6 +79,8 @@ interface ComponentData {
 
   waitingForEnd: boolean,
 
+  playerStalled: boolean,
+
   vods: VODItem[];
 }
 
@@ -119,6 +121,8 @@ export default {
       vods: [],
 
       waitingForEnd: false,
+
+      playerStalled: false,
     };
   },
   methods: {
@@ -228,7 +232,15 @@ export default {
         .onSuccess((result: ChannelStatus) => {
           this.found = true;
 
-          if (this.live && !result.live) {
+          let isVideoStillPlaying = false;
+
+          const videoElement = this.$el.querySelector("video") as HTMLVideoElement;
+
+          if (videoElement) {
+            isVideoStillPlaying = !videoElement.ended;
+          }
+
+          if (this.live && !result.live && isVideoStillPlaying && !this.playerStalled) {
             this.waitingForEnd = true;
           } else {
             this.waitingForEnd = false;
@@ -302,6 +314,12 @@ export default {
         });
     },
 
+    onStalled: function () {
+      if (this.playerStalled) {
+        this.onEnded();
+      }
+    },
+
     onEnded: function () {
       if (!this.waitingForEnd) {
         return;
@@ -310,6 +328,7 @@ export default {
       this.waitingForEnd = false;
       this.live = false;
       this.liveSubStreams = [];
+      this.autoSelectLiveStream();
     },
   },
   mounted: function () {
