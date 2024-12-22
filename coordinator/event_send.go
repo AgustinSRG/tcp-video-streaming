@@ -63,6 +63,10 @@ func SendStreamAvailableEvent(channel *StreamingChannel, event *PendingStreamAva
 		req.Header.Set("x-resolution", event.resolution)
 		req.Header.Set("x-index-file", event.indexFile)
 
+		if event.startTime != "" {
+			req.Header.Set("x-start-time", event.startTime)
+		}
+
 		if authorization != "" {
 			req.Header.Set("Authorization", authorization)
 		}

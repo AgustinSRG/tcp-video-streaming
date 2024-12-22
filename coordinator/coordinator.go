@@ -69,6 +69,7 @@ type PendingStreamAvailableEvent struct {
 	streamType string // Stream type: HLS-LIVE, HLS-VOD, IMG-PREVIEW
 	resolution string // Resolution: {WIDTH}x{HEIGHT}-{FPS}
 	indexFile  string // The index file path
+	startTime  string // Start time (seconds)
 
 	cancelled bool // True if the event got cancelled
 }

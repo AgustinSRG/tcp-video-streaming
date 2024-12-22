@@ -22,6 +22,8 @@ func (task *EncodingTask) getSubStream(resolution Resolution) *SubStreamStatus {
 			vodPlaylist:           nil,
 			vodPlaylistAvailable:  false,
 			vodIndex:              0,
+			vodTime:               0,
+			vodStartTime:          0,
 			vodWriting:            false,
 			vodWritePending:       false,
 			vodWriteData:          nil,
@@ -224,6 +226,7 @@ func (task *EncodingTask) updateVODInternal(subStream *SubStreamStatus) {
 		// Create new VOD playlist, the old one reached it's limit
 
 		subStream.vodIndex++
+		subStream.vodStartTime = subStream.vodTime
 		subStream.vodPlaylist = &HLS_PlayList{
 			Version:        M3U8_DEFAULT_VERSION,
 			TargetDuration: task.server.hlsTargetDuration,
@@ -238,6 +241,7 @@ func (task *EncodingTask) updateVODInternal(subStream *SubStreamStatus) {
 	for len(subStream.vodFragmentBuffer) > 0 && len(subStream.vodPlaylist.fragments) < task.server.hlsVODPlaylistMaxSize {
 		// Append fragment
 		subStream.vodPlaylist.fragments = append(subStream.vodPlaylist.fragments, subStream.vodFragmentBuffer[0])
+		subStream.vodTime += subStream.vodFragmentBuffer[0].Duration
 		playlistHasChanged = true
 		// Remove fragment from buffer
 		subStream.vodFragmentBuffer = subStream.vodFragmentBuffer[1:]
@@ -252,7 +256,7 @@ func (task *EncodingTask) updateVODInternal(subStream *SubStreamStatus) {
 			subStream.vodWriteData = playlistData
 		} else {
 			subStream.vodWriting = true
-			go task.SaveVODPlaylist(subStream, playlistData)
+			go task.SaveVODPlaylist(subStream, playlistData, subStream.vodStartTime)
 		}
 	}
 }
@@ -308,7 +312,7 @@ func (task *EncodingTask) OnLivePlaylistSaved(subStream *SubStreamStatus) {
 
 	if shouldAnnounce {
 		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-LIVE", subStream.resolution,
-			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8",
+			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8", 0,
 		)
 	}
 }
@@ -331,7 +335,7 @@ func (task *EncodingTask) OnCdnConnectionReady(subStream *SubStreamStatus) {
 
 	if shouldAnnounce {
 		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-LIVE", subStream.resolution,
-			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8",
+			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/live.m3u8", 0,
 		)
 	}
 }
@@ -355,7 +359,8 @@ func (task *EncodingTask) RemoveFragments(subStream *SubStreamStatus, fromIndex 
 // Saves VOD playlist
 // subStream - Reference to the sub-stream
 // data - Data to write
-func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byte) {
+// startTime - Start time (seconds)
+func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byte, startTime float64) {
 	filePath := "hls/" + task.channel + "/" + task.streamId + "/" + subStream.resolution.Encode() + "/vod-" + fmt.Sprint(subStream.vodIndex) + ".m3u8"
 	done := false
 
@@ -367,7 +372,7 @@ func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byt
 		if err != nil {
 			LogError(err)
 		} else {
-			task.OnVODPlaylistSaved(subStream)
+			task.OnVODPlaylistSaved(subStream, startTime)
 		}
 
 		task.mutex.Lock()
@@ -389,7 +394,8 @@ func (task *EncodingTask) SaveVODPlaylist(subStream *SubStreamStatus, data []byt
 
 // Call after the VOD playlist is saved successfully
 // subStream - Reference to the sub-stream
-func (task *EncodingTask) OnVODPlaylistSaved(subStream *SubStreamStatus) {
+// startTime - Start time in seconds
+func (task *EncodingTask) OnVODPlaylistSaved(subStream *SubStreamStatus, startTime float64) {
 	shouldAnnounce := false
 	indexToAnnounce := 0
 	task.mutex.Lock()
@@ -405,6 +411,7 @@ func (task *EncodingTask) OnVODPlaylistSaved(subStream *SubStreamStatus) {
 	if shouldAnnounce {
 		task.server.websocketControlConnection.SendStreamAvailable(task.channel, task.streamId, "HLS-VOD", subStream.resolution,
 			"hls/"+task.channel+"/"+task.streamId+"/"+subStream.resolution.Encode()+"/vod-"+fmt.Sprint(indexToAnnounce)+".m3u8",
+			startTime,
 		)
 	}
 }

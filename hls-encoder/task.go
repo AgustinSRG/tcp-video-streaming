@@ -64,6 +64,8 @@ type SubStreamStatus struct {
 	vodPlaylist          *HLS_PlayList  // VOD playlist
 	vodPlaylistAvailable bool           // True if the current VOD playlist is available
 	vodIndex             int            // VOD index
+	vodTime              float64        // VOD time (seconds)
+	vodStartTime         float64        // VOD start time (seconds)
 	vodWriting           bool           // True if the vod playlist is being written
 	vodWritePending      bool           // True if the vod playlist is pending of being written
 	vodWriteData         []byte         // Data to write to the vod playlist

@@ -48,6 +48,7 @@ The request is a **POST** HTTP request, with an **empty body**, and the followin
  - `x-event-type`: Event type. Can be `stream-available` if the streaming session is available for playback, or `stream-closed` if the streaming session has ended.
  - `x-stream-type` - For the `stream-available` event, multiple events with the same streaming ID will be sent for each type and resolution. Type can be `HLS-LIVE`, `HLS-VOD` or `IMG-PREVIEW`.
  - `x-resolution` - For the `stream-available` event, multiple events with the same streaming ID will be sent for each type and resolution. Resolution is formatted as `{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}`
+ - `x-start-time` - For the `stream-available` event, when `x-stream-type` is `HLS-VOD`, the starting time of the VOD in seconds. If not specified, the start time is 0 seconds (for the first VOD of each stream session).
  - `x-index-file` - Only for `stream-available` event. Full path to the index file in the shared file system. It can be a `m3u8` playlist or a `json` file for the images.
  - `Authorization`: Authorization header, depending on your auth method.
 

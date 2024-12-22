@@ -201,7 +201,7 @@ func (session *ControlSession) HandleMessage(msg messages.RPCMessage) {
 
 		session.HandleEncoderRegister(int(capacity))
 	case "STREAM-AVAILABLE":
-		session.HandleStreamAvailable(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Type"), msg.GetParam("Resolution"), msg.GetParam("Index-file"))
+		session.HandleStreamAvailable(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"), msg.GetParam("Stream-Type"), msg.GetParam("Resolution"), msg.GetParam("Start-Time"), msg.GetParam("Index-file"))
 	case "STREAM-CLOSED":
 		session.HandleStreamClosed(msg.GetParam("Stream-Channel"), msg.GetParam("Stream-ID"))
 	}

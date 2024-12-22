@@ -222,7 +222,8 @@ func (c *ControlServerConnection) SendRegister(capacity int) bool {
 // streamType - Sub-stream type. Can be HLS-LIVE, HLS-VOD or IMG-PREVIEW
 // resolution - Video resolution
 // indexFile - Stream index file
-func (c *ControlServerConnection) SendStreamAvailable(channel string, streamId string, streamType string, resolution Resolution, indexFile string) bool {
+// startTime - Starting time (for VOD streams)
+func (c *ControlServerConnection) SendStreamAvailable(channel string, streamId string, streamType string, resolution Resolution, indexFile string, startTime float64) bool {
 	msgParams := make(map[string]string)
 
 	msgParams["Stream-Channel"] = channel
@@ -230,6 +231,9 @@ func (c *ControlServerConnection) SendStreamAvailable(channel string, streamId s
 	msgParams["Stream-Type"] = streamType
 	msgParams["Resolution"] = resolution.Encode()
 	msgParams["Index-file"] = indexFile
+	if startTime > 0 {
+		msgParams["Start-Time"] = fmt.Sprint(startTime)
+	}
 
 	msg := messages.RPCMessage{
 		Method: "STREAM-AVAILABLE",

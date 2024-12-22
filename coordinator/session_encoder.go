@@ -28,7 +28,7 @@ func (session *ControlSession) HandleEncoderRegister(capacity int) {
 // streamType - The stream type (`HLS-LIVE`, `HLS-VOD` or `IMG-PREVIEW`)
 // resolution - The resolution ({WIDTH}x{HEIGHT}-{FPS})
 // indexFile - Full path to the index file in the shared file system
-func (session *ControlSession) HandleStreamAvailable(channel string, streamId string, streamType string, resolution string, indexFile string) {
+func (session *ControlSession) HandleStreamAvailable(channel string, streamId string, streamType string, resolution string, startTimeStr string, indexFile string) {
 	if session.sessionType != SESSION_TYPE_HLS {
 		return
 	}
@@ -53,6 +53,7 @@ func (session *ControlSession) HandleStreamAvailable(channel string, streamId st
 		streamType: streamType,
 		resolution: resolution,
 		indexFile:  indexFile,
+		startTime:  startTimeStr,
 		cancelled:  false,
 	}
 
@@ -60,7 +61,13 @@ func (session *ControlSession) HandleStreamAvailable(channel string, streamId st
 
 	go SendStreamAvailableEvent(channelData, event)
 
-	session.log("STREAM-AVAILABLE: " + channel + "/" + streamId + " | TYPE=" + streamType + " | RESOLUTION=" + resolution + " | INDEX=" + indexFile)
+	startTimeStrDisplay := startTimeStr
+
+	if startTimeStrDisplay == "" {
+		startTimeStrDisplay = "0"
+	}
+
+	session.log("STREAM-AVAILABLE: " + channel + "/" + streamId + " | TYPE=" + streamType + " | RESOLUTION=" + resolution + " | START-TIME: " + startTimeStrDisplay + " | INDEX=" + indexFile)
 }
 
 // Handles STREAM-CLOSED message

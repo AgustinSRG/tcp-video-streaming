@@ -128,6 +128,7 @@ The required arguments are:
  - `Stream-ID` - Unique identifier of the video stream session
  - `Stream-Type` - Type of stream. Can be `HLS-LIVE`, `HLS-VOD` or `IMG-PREVIEW`.
  - `Resolution` - Resolution with format `{WIDTH}x{HEIGHT}-{FPS}~{BITRATE}`
+ - `Start-Time` - Start time of the stream in seconds (mainly for VOD streams). If not specified, start time is assumed to be 0 seconds.
  - `Index-file` - Full path to the index file in the shared file system. It can be a `m3u8` playlist or a `json` file for the images.
 
 ```

@@ -81,6 +81,7 @@ func (task *EncodingTask) OnImagePreviewsIndexSaved() {
 			height: task.previews.height,
 			fps:    task.previews.delaySeconds},
 			"img-preview/"+task.channel+"/"+task.streamId+"/"+task.previews.Encode("-")+"/index.json",
+			0,
 		)
 	}
 }
