@@ -8,7 +8,7 @@
         <div class="form-group">
           <select class="form-control" v-model="selectedSubStream">
             <option v-for="ss in subStreams" :key="ss.indexFile" :value="ss.indexFile">VOD[{{ getVODIndex(ss.indexFile) }}] - {{ ss.width }}x{{ ss.height }},
-              {{ ss.fps }} fps</option>
+              {{ ss.fps }} fps (Start time: {{ renderTime(ss.startTime || 0) }})</option>
           </select>
         </div>
         <div class="">

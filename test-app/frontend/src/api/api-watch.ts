@@ -7,6 +7,7 @@ export interface SubStream {
     height: number;
     fps: number;
     indexFile: string;
+    startTime?: number;
 }
 
 export interface SubStreamWithCdn {

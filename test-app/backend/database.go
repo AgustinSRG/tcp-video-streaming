@@ -5,7 +5,6 @@ package main
 import (
 	"crypto/subtle"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -58,10 +57,11 @@ type VODStreaming struct {
 }
 
 type SubStream struct {
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
-	FPS       int    `json:"fps"`
-	IndexFile string `json:"indexFile"`
+	Width     int     `json:"width"`
+	Height    int     `json:"height"`
+	FPS       int     `json:"fps"`
+	IndexFile string  `json:"indexFile"`
+	StartTime float64 `json:"startTime,omitempty"`
 }
 
 type SubStreamWithCdn struct {
@@ -89,7 +89,7 @@ func CreateStreamingTestAppDatabase() *StreamingTestAppDatabase {
 
 	data := StreamingTestAppData{}
 
-	content, err := ioutil.ReadFile(fullPath)
+	content, err := os.ReadFile(fullPath)
 
 	if err == nil {
 		err = json.Unmarshal(content, &data)
@@ -147,7 +147,7 @@ func (db *StreamingTestAppDatabase) writeToFile(data []byte) {
 	dataToWrite := data
 
 	for !done {
-		err := ioutil.WriteFile(tmpPath, dataToWrite, FILE_PERMISSION)
+		err := os.WriteFile(tmpPath, dataToWrite, FILE_PERMISSION)
 
 		if err != nil {
 			LogError(err)
@@ -217,7 +217,7 @@ func (channel *StreamingChannel) FindOrCreateVOD(streamId string) *VODStreaming 
 	return &channel.VODList[len(channel.VODList)-1]
 }
 
-func (db *StreamingTestAppDatabase) AddAvailableStream(channel string, streamId string, streamType string, resolution string, indexFile string) error {
+func (db *StreamingTestAppDatabase) AddAvailableStream(channel string, streamId string, streamType string, resolution string, indexFile string, startTime float64) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -246,6 +246,7 @@ func (db *StreamingTestAppDatabase) AddAvailableStream(channel string, streamId 
 		Width:     parsedResolution.width,
 		Height:    parsedResolution.height,
 		FPS:       parsedResolution.fps,
+		StartTime: startTime,
 	}
 
 	if streamType == "HLS-LIVE" {

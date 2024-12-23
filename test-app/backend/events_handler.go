@@ -5,8 +5,10 @@ package main
 import (
 	"crypto/subtle"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -42,12 +44,22 @@ func callback_eventsHandler(response http.ResponseWriter, request *http.Request)
 	resolution := request.Header.Get("x-resolution")
 	indexFile := request.Header.Get("x-index-file")
 
-	LogDebug("Incoming streaming event. Channel=" + channel + ", ID=" + streamId + ", EV_TYPE=" + eventType + ", S_TYPE=" + streamType + ", RESOLUTION=" + resolution + ", INDEX=" + indexFile)
+	startTime := float64(0)
+
+	if request.Header.Get("x-start-time") != "" {
+		st, err := strconv.ParseFloat(request.Header.Get("x-start-time"), 64)
+
+		if err == nil {
+			startTime = st
+		}
+	}
+
+	LogDebug("Incoming streaming event. Channel=" + channel + ", ID=" + streamId + ", EV_TYPE=" + eventType + ", S_TYPE=" + streamType + ", RESOLUTION=" + resolution + ", INDEX=" + indexFile + ", START_TIME=" + fmt.Sprint(startTime))
 
 	var err error = nil
 
 	if eventType == "stream-available" {
-		err = DATABASE.AddAvailableStream(channel, streamId, streamType, resolution, indexFile)
+		err = DATABASE.AddAvailableStream(channel, streamId, streamType, resolution, indexFile, startTime)
 	} else if eventType == "stream-closed" {
 		err = DATABASE.CloseStream(channel, streamId)
 	}
