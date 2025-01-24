@@ -82,7 +82,7 @@ services:
       - 1935:1935
     networks:
       - tcp_video_streaming_test
-    image: asanrom/tcp-video-streaming:latest
+    image: asanrom/rtmp-server:latest
     restart: unless-stopped
     command: rtmp-server
     environment:
@@ -90,6 +90,7 @@ services:
       - CONCURRENT_LIMIT_WHITELIST=*
       - EXTERNAL_PORT=1935
       - EXTERNAL_SSL=NO
+      - CONTROL_USE=YES
       - CONTROL_BASE_URL=ws://coordinator/
       - CONTROL_SECRET=${SHARED_SECRET:-demosecret}
       - RTMP_PLAY_WHITELIST=*
