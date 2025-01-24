@@ -96,6 +96,14 @@ export default {
       this.clear();
       this.load();
     },
+    cdnUrl: function () {
+      this.clear();
+      this.load();
+    },
+    cdnAuth: function () {
+      this.clear();
+      this.load();
+    },
     latency: function (newValue: number, oldValue: number) {
       if (newValue === oldValue) {
         return;
