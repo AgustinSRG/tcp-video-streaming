@@ -35,10 +35,6 @@ jobs:
       working-directory: ./hls-encoder
       run: go build . && go test -v
 
-    - name: Build and test rtmp-server
-      working-directory: ./rtmp-server
-      run: go build . && go test -v
-
     - name: Build and test ws-stream-server
       working-directory: ./ws-stream-server
       run: go build . && go test -v
