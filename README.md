@@ -25,7 +25,7 @@ The video streaming application will accept different broadcasting protocols dep
 
 ## List of tools
 
-- [RTMP Server](./rtmp-server): This component supports the RTMP protocol and it is meant for clients to connect and broadcast the video stream using such protocol.
+- [RTMP Server](https://github.com/AgustinSRG/rtmp-server): This component supports the RTMP protocol and it is meant for clients to connect and broadcast the video stream using such protocol.
 - [Websocket Stream Server](./ws-stream-server): This component allows web browsers to open a Websocket and send video chunks as messages. This is necessary for Web Browser broadcasting compatibility, since a web page cannot open raw TPC connections required for the RTMP protocol.
 - [Coordinator](./coordinator): This component coordinates the other components and communicates with the rest of the application, allowing it to authorize or deny broadcasting requests and to force stop any active video streams.
 - [HLS Encoder](./hls-encoder): This component encodes video streams to HLS and resizes them to multiple resolutions and frame rates.
@@ -56,7 +56,6 @@ You can run the image specifying the tool you want to run in the `command` optio
 | ------------------ | --------------------------------------------- |
 | `coordinator`      | [Coordinator](./coordinator)                  |
 | `hls-encoder`      | [HLS Encoder](./hls-encoder)                  |
-| `rtmp-server`      | [RTMP Server](./rtmp-server)                  |
 | `ws-stream-server` | [Websocket Stream Server](./ws-stream-server) |
 
 Check the README file of each tool in order to know the available configuration variables for them.
