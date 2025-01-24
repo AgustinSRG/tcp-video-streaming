@@ -84,7 +84,6 @@ services:
       - tcp_video_streaming_test
     image: asanrom/rtmp-server:latest
     restart: unless-stopped
-    command: rtmp-server
     environment:
       - RTMP_CHUNK_SIZE=5000
       - CONCURRENT_LIMIT_WHITELIST=*
