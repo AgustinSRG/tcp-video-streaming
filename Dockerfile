@@ -18,21 +18,13 @@ RUN go build .
 
 RUN cp coordinator /root/dist/coordinator
 
-# Build: coordinator
+# Build: hls-encoder
 
 WORKDIR /root/hls-encoder
 
 RUN go build .
 
 RUN cp hls-encoder /root/dist/hls-encoder
-
-# Build: rtmp-server
-
-WORKDIR /root/rtmp-server
-
-RUN go build .
-
-RUN cp rtmp-server /root/dist/rtmp-server
 
 # Build: ws-stream-server
 
