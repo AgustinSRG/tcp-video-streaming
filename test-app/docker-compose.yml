@@ -82,7 +82,7 @@ services:
       - 1935:1935
     networks:
       - tcp_video_streaming_test
-    image: asanrom/rtmp-server:latest
+    image: asanrom/rtmp-server-rs:latest
     restart: unless-stopped
     environment:
       - RTMP_CHUNK_SIZE=5000
