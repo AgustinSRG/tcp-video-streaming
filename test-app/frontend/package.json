@@ -29,7 +29,7 @@
     "eslint-plugin-vue": "9.17.0",
     "prettier": "3.0.0",
     "typescript": "5.2.2",
-    "vite": "6.2.6",
-    "vue-tsc": "2.0.29"
+    "vite": "6.3.5",
+    "vue-tsc": "2.2.10"
   }
 }
