@@ -1,5 +1,3 @@
-
-
 export function renderTimeSeconds(s: number): string {
     if (isNaN(s) || !isFinite(s) || s < 0) {
         s = 0;
@@ -45,7 +43,7 @@ export function parseTimeSeconds(str: string): number {
 
     let h = 0;
     let m = 0;
-    let s = 0;
+    let s: number;
 
     if (parts.length > 2) {
         h = parseInt(parts[0], 10) || 0;
@@ -58,6 +56,5 @@ export function parseTimeSeconds(str: string): number {
         s = parseInt(parts[0], 10) || 0;
     }
 
-    return (h * 3600) + (m * 60) + s;
+    return h * 3600 + m * 60 + s;
 }
-

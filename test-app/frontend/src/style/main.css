@@ -65,7 +65,6 @@ h1 {
     padding: 0.2rem 0.3rem;
 }
 
-
 .table-container {
     overflow-x: auto;
     width: 100%;
@@ -90,7 +89,7 @@ h1 {
 
 .table thead th {
     vertical-align: bottom;
-    border-bottom: 2px solid black
+    border-bottom: 2px solid black;
 }
 
 .channel-control-group {

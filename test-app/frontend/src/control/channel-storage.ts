@@ -77,7 +77,7 @@ export class ChannelStorage {
     }
 
     public static RemoveChannel(channel: string) {
-        const channels = ChannelStorage.GetControlledChannels().filter(ch => {
+        const channels = ChannelStorage.GetControlledChannels().filter((ch) => {
             return channel !== ch.id;
         });
 

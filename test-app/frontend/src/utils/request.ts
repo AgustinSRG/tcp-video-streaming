@@ -2,7 +2,8 @@
 
 "use strict";
 
-import axios, { AxiosError } from "axios";
+import type { AxiosError } from "axios";
+import axios from "axios";
 
 export function GetAPIURL(path: string): string {
     if (import.meta.env.DEV) {
@@ -53,7 +54,6 @@ export interface RequestParams {
 }
 
 export class Request {
-
     public static pending: { [key: string]: Request } = {};
 
     public static ErrorHandler(): RequestErrorHandler {
@@ -94,29 +94,32 @@ export class Request {
             Request.pending[key] = r;
         }
 
-        axios.get(url, {
-            signal: controller.signal,
-        }).then(response => {
-            if (key) {
-                delete Request.pending[key];
-            }
+        axios
+            .get(url, {
+                signal: controller.signal,
+            })
+            .then((response) => {
+                if (key) {
+                    delete Request.pending[key];
+                }
 
-            r._onSuccess(response.data)
-        }).catch(thrown => {
-            if (axios.isCancel(thrown)) {
-                r._onCancel();
-            } else if (axios.isAxiosError(thrown)) {
-                if (key) {
-                    delete Request.pending[key];
+                r._onSuccess(response.data);
+            })
+            .catch((thrown) => {
+                if (axios.isCancel(thrown)) {
+                    r._onCancel();
+                } else if (axios.isAxiosError(thrown)) {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onRequestError(thrown);
+                } else {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onUnexpectedError(thrown);
                 }
-                r._onRequestError(thrown);
-            } else {
-                if (key) {
-                    delete Request.pending[key];
-                }
-                r._onUnexpectedError(thrown);
-            }
-        })
+            });
 
         return r;
     }
@@ -131,32 +134,35 @@ export class Request {
             Request.pending[key] = r;
         }
 
-        axios.post(url, json, {
-            signal: controller.signal,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        }).then(response => {
-            if (key) {
-                delete Request.pending[key];
-            }
+        axios
+            .post(url, json, {
+                signal: controller.signal,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+            .then((response) => {
+                if (key) {
+                    delete Request.pending[key];
+                }
 
-            r._onSuccess(response.data)
-        }).catch(thrown => {
-            if (axios.isCancel(thrown)) {
-                r._onCancel();
-            } else if (axios.isAxiosError(thrown)) {
-                if (key) {
-                    delete Request.pending[key];
+                r._onSuccess(response.data);
+            })
+            .catch((thrown) => {
+                if (axios.isCancel(thrown)) {
+                    r._onCancel();
+                } else if (axios.isAxiosError(thrown)) {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onRequestError(thrown);
+                } else {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onUnexpectedError(thrown);
                 }
-                r._onRequestError(thrown);
-            } else {
-                if (key) {
-                    delete Request.pending[key];
-                }
-                r._onUnexpectedError(thrown);
-            }
-        })
+            });
 
         return r;
     }
@@ -171,35 +177,38 @@ export class Request {
             Request.pending[key] = r;
         }
 
-        axios.post(url, form, {
-            signal: controller.signal,
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            onUploadProgress: progressEvent => {
-                r._onUploadProgress(progressEvent.loaded || 0, progressEvent.total || 0);
-            }
-        }).then(response => {
-            if (key) {
-                delete Request.pending[key];
-            }
+        axios
+            .post(url, form, {
+                signal: controller.signal,
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+                onUploadProgress: (progressEvent) => {
+                    r._onUploadProgress(progressEvent.loaded || 0, progressEvent.total || 0);
+                },
+            })
+            .then((response) => {
+                if (key) {
+                    delete Request.pending[key];
+                }
 
-            r._onSuccess(response.data)
-        }).catch(thrown => {
-            if (axios.isCancel(thrown)) {
-                r._onCancel();
-            } else if (axios.isAxiosError(thrown)) {
-                if (key) {
-                    delete Request.pending[key];
+                r._onSuccess(response.data);
+            })
+            .catch((thrown) => {
+                if (axios.isCancel(thrown)) {
+                    r._onCancel();
+                } else if (axios.isAxiosError(thrown)) {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onRequestError(thrown);
+                } else {
+                    if (key) {
+                        delete Request.pending[key];
+                    }
+                    r._onUnexpectedError(thrown);
                 }
-                r._onRequestError(thrown);
-            } else {
-                if (key) {
-                    delete Request.pending[key];
-                }
-                r._onUnexpectedError(thrown);
-            }
-        })
+            });
 
         return r;
     }
@@ -227,11 +236,11 @@ export class Request {
     constructor(url: string, abortController: AbortController) {
         this.url = url;
         this.abortController = abortController;
-        this._onSuccess = function () { };
-        this._onCancel = function () { };
-        this._onRequestError = function () { };
-        this._onUnexpectedError = function () { };
-        this._onUploadProgress = function () { };
+        this._onSuccess = function () {};
+        this._onCancel = function () {};
+        this._onRequestError = function () {};
+        this._onUnexpectedError = function () {};
+        this._onUploadProgress = function () {};
     }
 
     public onSuccess(fn: (response: any) => void): Request {
@@ -306,7 +315,7 @@ export class RequestErrorHandler {
                 }
 
                 errorCode = parsedData.code || "";
-            } catch (err) {
+            } catch (_err) {
                 errorCode = "";
             }
         }

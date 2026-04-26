@@ -2,10 +2,10 @@
 
 "use strict";
 
-export declare interface WebSocketPublisher {
-    addEventListener(event: 'open', listener: (ev: Event) => void): this;
-    addEventListener(event: 'close', listener: (ev: Event) => void): this;
-    addEventListener(event: 'error', listener: (ev: ErrorEvent) => void): this;
+export declare interface IWebSocketPublisher {
+    addEventListener(event: "open", listener: (ev: Event) => void);
+    addEventListener(event: "close", listener: (ev: Event) => void);
+    addEventListener(event: "error", listener: (ev: ErrorEvent) => void);
 }
 
 const RECORDER_INTERVAL = 500;
@@ -16,7 +16,7 @@ function stopStream(stream: MediaStream) {
         stream.getTracks().forEach(function (track) {
             track.stop();
         });
-    } catch (ex) { 
+    } catch (ex) {
         console.error(ex);
     }
 }
@@ -25,7 +25,7 @@ export function getWebsocketPublishingURL(base: string, channel: string, key: st
     return base + "/" + channel + "/" + key + "/publish";
 }
 
-export class WebSocketPublisher extends EventTarget {
+export class WebSocketPublisher extends EventTarget implements IWebSocketPublisher {
     public ws: WebSocket;
 
     public stream: MediaStream;
@@ -105,16 +105,15 @@ export class WebSocketPublisher extends EventTarget {
     }
 
     private onError(err: Event) {
-        this.dispatchEvent(new ErrorEvent('error', { error: err }));
+        this.dispatchEvent(new ErrorEvent("error", { error: err }));
     }
-
 
     private onMessage(ev: MessageEvent) {
         const data = ev.data;
 
         if (typeof data === "string") {
             if (data.startsWith("ERROR:")) {
-                this.dispatchEvent(new ErrorEvent('error', { error: new Error(data) }));
+                this.dispatchEvent(new ErrorEvent("error", { error: new Error(data) }));
             }
         }
     }

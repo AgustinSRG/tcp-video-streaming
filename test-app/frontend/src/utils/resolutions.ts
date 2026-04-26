@@ -16,17 +16,17 @@ export interface ResolutionList {
 
 export function parseResolution(str: string): Resolution {
     let parts = str.split("~");
-    const bitRate = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+    const bitRate = parts[1] ? parseInt((parts[1] + "").trim(), 10) : -1;
 
     parts = (parts[0] + "").toLowerCase().split("-");
-    let fps = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : -1;
+    let fps = parts[1] ? parseInt((parts[1] + "").trim(), 10) : -1;
     if (fps <= 0) {
         fps = -1;
     }
-    
+
     parts = (parts[0] + "").toLowerCase().split("x");
-    const width = parts[0] ? (parseInt((parts[0] + "").trim(), 10)) : 0;
-    const height = parts[1] ? (parseInt((parts[1] + "").trim(), 10)) : 0;
+    const width = parts[0] ? parseInt((parts[0] + "").trim(), 10) : 0;
+    const height = parts[1] ? parseInt((parts[1] + "").trim(), 10) : 0;
 
     return {
         width: width,
@@ -40,17 +40,17 @@ export function encodeResolution(r: Resolution): string {
     let str = r.width + "x" + r.height;
 
     if (r.fps > 0) {
-        str += "-" + r.fps
+        str += "-" + r.fps;
     }
 
     if (r.bitRate > 0) {
-        str += "~" + r.bitRate
+        str += "~" + r.bitRate;
     }
 
     return str;
 }
 
-export function parseResolutionList(str: string): ResolutionList{
+export function parseResolutionList(str: string): ResolutionList {
     str = str.trim();
 
     if (!str) {
@@ -63,7 +63,7 @@ export function parseResolutionList(str: string): ResolutionList{
     const res: ResolutionList = {
         hasOriginal: false,
         resolutions: [],
-    }
+    };
 
     const parts = str.split(",");
 
@@ -91,7 +91,7 @@ export function parseResolutionList(str: string): ResolutionList{
 
 export function encodeResolutionList(rl: ResolutionList): string {
     if (rl.hasOriginal) {
-        return "ORIGINAL" + ((rl.resolutions.length > 0) ? ("," + rl.resolutions.map(encodeResolution).join(",")): "");
+        return "ORIGINAL" + (rl.resolutions.length > 0 ? "," + rl.resolutions.map(encodeResolution).join(",") : "");
     } else {
         return rl.resolutions.map(encodeResolution).join(",");
     }
